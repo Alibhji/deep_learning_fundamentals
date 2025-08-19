@@ -2,12 +2,48 @@
 
 ```mermaid
 flowchart TD
-    X["Tokens (B, N, d_model)"] --> PE["+ Positional Encoding"]
-    PE --> WQKV["Linear projections W_q / W_k / W_v"]
-    WQKV --> SPLIT["Reshape → Heads (B, H, N, D_k/D_v)"]
-    SPLIT --> ATTN["Scaled Dot-Product Attention\n(QK^T/√D_k → softmax → ·V)"]
-    ATTN --> CAT["Concat heads (B, N, H·D_v)"]
-    CAT --> WO["Output projection W_o\n(B, N, d_model)"]
-    WO --> FFN["Position-wise FFN"]
-    FFN --> RESNORM["Residual + LayerNorm"]
+    subgraph "Input Processing"
+        TOK["Input Tokens (B, N, vocab_size)"] --> EMB["Token Embedding (B, N, d_model)"]
+        EMB --> PE["+ Positional Encoding<br/>(Sinusoidal/Learned)"]
+    end
+    
+    subgraph "Multi-Head Attention Block"
+        PE --> WQKV["Linear Projections<br/>W_q, W_k, W_v: (B, N, d_model) → (B, N, d_model)"]
+        WQKV --> SPLIT["Reshape to Heads<br/>(B, N, d_model) → (B, N, H, D_k) → (B, H, N, D_k)"]
+        SPLIT --> ATTN["Scaled Dot-Product Attention<br/>scores = (Q @ K^T) / √D_k<br/>weights = softmax(scores)<br/>output = weights @ V"]
+        ATTN --> CAT["Concat Heads<br/>(B, H, N, D_v) → (B, N, H·D_v)"]
+        CAT --> WO["Output Projection W_o<br/>(B, N, H·D_v) → (B, N, d_model)"]
+        WO --> DROP1["Dropout"]
+        DROP1 --> ADD1["+ Residual Connection"]
+    end
+    
+    subgraph "Feed-Forward Network"
+        ADD1 --> NORM1["LayerNorm"]
+        NORM1 --> FFN["Position-wise FFN<br/>Linear(d_model, d_ff) → ReLU → Dropout → Linear(d_ff, d_model)"]
+        FFN --> DROP2["Dropout"]
+        DROP2 --> ADD2["+ Residual Connection"]
+    end
+    
+    subgraph "Output"
+        ADD2 --> NORM2["LayerNorm"]
+        NORM2 --> OUT["Output (B, N, d_model)"]
+    end
+    
+    subgraph "Key Parameters"
+        B["B: Batch size"]
+        N["N: Sequence length"]
+        H["H: Number of heads"]
+        D_K["D_k: Key dimension per head"]
+        D_V["D_v: Value dimension per head"]
+        D_MODEL["d_model: Model dimension"]
+        D_FF["d_ff: Feed-forward dimension"]
+    end
+    
+    subgraph "Mathematical Operations"
+        QKT["Q @ K^T: Query-Key similarity"]
+        SCALE["÷ √D_k: Scaling factor"]
+        SOFTMAX["softmax: Attention weights"]
+        ATTEND["@ V: Weighted values"]
+        RESIDUAL["+ x: Residual connection"]
+    end
 ```
