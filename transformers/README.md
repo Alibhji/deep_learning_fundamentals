@@ -40,6 +40,18 @@ Welcome to the comprehensive learning path for understanding Transformers, Encod
 - **Quantization (QLoRA, GPTQ, AWQ), vLLM/TensorRT-LLM**
 - **torch.compile/Inductor, BetterTransformer, KV cache**
 
+git ### 7. [Embedded Vision Deployment (32×32 Human/Not-Human)](./07-embedded-vision/README.md)
+- **Tiny ViT-like model**: 32×32 input, boolean output
+- **Export**: ONNX/TFLite, INT8 quantization
+- **Deploy**: MCU (TFLite Micro) or ARM SoC (ONNX Runtime)
+- **Notebook**: End-to-end demo
+
+### 8. [Low-level Compute: Pixel→Logit & Memory/Registers](./08-low-level-compute/README.md)
+- **Parameter placement** on GPU (HBM/L2/L1/registers)
+- **Tensor layout** and GEMM tiling
+- **Minimal register/compute units** conceptually
+- **Pixel path** from input to final logit with diagrams
+
 ## 🎯 Learning Objectives
 
 By the end of this learning path, you will understand:
