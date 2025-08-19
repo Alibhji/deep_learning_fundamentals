@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModel
+from einops import rearrange
 
 
 class CLIP(nn.Module):
@@ -72,6 +73,18 @@ class CLIP(nn.Module):
         logits = torch.matmul(text_embeddings, image_embeddings.T) / self.temperature
         
         return logits, text_embeddings, image_embeddings
+
+    @staticmethod
+    def flatten_patches_then_restore(embeddings: torch.Tensor, B: int, N: int) -> torch.Tensor:
+        """
+        Demonstration utility that flattens (B, N, C) to (B*N, C) then restores using einops:
+            rearrange(image_embeddings, '(B N) C -> B N C', B=B, N=N)
+        """
+        # Flatten: (B, N, C) -> (B*N, C)
+        flat = rearrange(embeddings, 'B N C -> (B N) C')
+        # Restore: (B*N, C) -> (B, N, C)
+        restored = rearrange(flat, '(B N) C -> B N C', B=B, N=N)
+        return restored
 
 
 def clip_loss(logits, labels):

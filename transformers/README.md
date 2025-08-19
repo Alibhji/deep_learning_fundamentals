@@ -34,6 +34,12 @@ Welcome to the comprehensive learning path for understanding Transformers, Encod
 - **Normalization**: LayerNorm, RMSNorm, GroupNorm
 - **Optimization**: AdamW, Lion, Sophia
 
+### 6. [SOTA Optimization (Training & Inference)](./06-sota-optimization/README.md)
+- **FlashAttention, MQA/GQA, Speculative Decoding**
+- **FSDP/ZeRO, Checkpointing, Mixed Precision**
+- **Quantization (QLoRA, GPTQ, AWQ), vLLM/TensorRT-LLM**
+- **torch.compile/Inductor, BetterTransformer, KV cache**
+
 ## 🎯 Learning Objectives
 
 By the end of this learning path, you will understand:

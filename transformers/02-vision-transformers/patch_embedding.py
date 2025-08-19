@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from einops import rearrange
 
 
 class PatchEmbedding(nn.Module):
@@ -208,6 +209,24 @@ class MultiHeadAttention(nn.Module):
         return self.W_o(attended)
 
 
+def restore_batch_from_flat_embeddings(flat_embeddings: torch.Tensor, batch_size: int, num_patches: int) -> torch.Tensor:
+    """
+    Restore embeddings shaped as (batch_size * num_patches, embed_dim) back to (batch_size, num_patches, embed_dim)
+
+    This demonstrates the requested einops rearrange usage pattern:
+        rearrange(image_embeddings, '(B N) C -> B N C', B=B, N=N)
+
+    Args:
+        flat_embeddings: Tensor of shape (B*N, C)
+        batch_size: B
+        num_patches: N
+
+    Returns:
+        Tensor of shape (B, N, C)
+    """
+    return rearrange(flat_embeddings, '(B N) C -> B N C', B=batch_size, N=num_patches)
+
+
 class SwinTransformerBlock(nn.Module):
     """Swin Transformer block with window-based attention"""
     
@@ -300,5 +319,12 @@ if __name__ == "__main__":
     x_swin = x_swin.mean(dim=0)  # (H, W, C) for single sample
     output_swin = swin_block(x_swin.unsqueeze(0))
     print(f"Swin block output shape: {output_swin.shape}")
+
+    # Demonstrate einops.rearrange usage to restore batched embeddings
+    print("\nDemonstrating rearrange to restore (B*N, C) -> (B, N, C)...")
+    B, N, C = 2, patch_embed.n_patches, 768
+    flat = torch.randn(B * N, C)
+    restored = restore_batch_from_flat_embeddings(flat, B, N)
+    print(f"Flat shape: {flat.shape} | Restored shape: {restored.shape}")
     
     print("\nAll vision transformer components working correctly!")
