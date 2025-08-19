@@ -1013,3 +1013,21 @@ class ModelDeployer:
 - [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531)
 - [Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference](https://arxiv.org/abs/1712.05877)
 - [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](https://arxiv.org/abs/1803.03635)
+
+## 🔎 Curated Resources and Further Study
+
+### Design & architecture references
+- [The Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/)
+- [Hugging Face course: attention & transformers](https://huggingface.co/course)
+- [xFormers (Meta) — attention/kernels zoo](https://github.com/facebookresearch/xformers)
+
+### Papers on patterns & scaling
+- [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
+- [Switch Transformers](https://arxiv.org/abs/2101.03961)
+- [Mixture-of-Experts (GShard)](https://arxiv.org/abs/2006.16668)
+
+### Practitioner checklist
+- Start from proven configs (depth/width/heads) and scale gradually
+- Keep normalization consistent (RMSNorm vs LayerNorm) and monitor stability
+- Use residual scaling and pre-norm for deep stacks
+- Profile bottlenecks; consider attention variants (local/sparse) for long sequences

@@ -589,3 +589,23 @@ def evaluate_multimodal_model(model, dataloader, device):
 - [PaLM-E: An Embodied Multimodal Language Model](https://arxiv.org/abs/2303.03378)
 - [VideoCLIP: Contrastive Pre-training for Video-Text Understanding](https://arxiv.org/abs/2109.14084)
 - [AudioCLIP: Extending CLIP to Image, Text and Audio](https://arxiv.org/abs/2106.13043)
+
+## 🔎 Curated Resources and Further Study
+
+### Official repos & libraries
+- CLIP: [openai/CLIP](https://github.com/openai/CLIP) and [mlfoundations/open_clip](https://github.com/mlfoundations/open_clip)
+- LAVIS (multimodal toolkit): [salesforce/LAVIS](https://github.com/salesforce/LAVIS)
+- BLIP/BLIP-2: [Salesforce/BLIP](https://github.com/salesforce/BLIP)
+
+### Papers
+- [CLIP](https://arxiv.org/abs/2103.00020)
+- [ALIGN](https://arxiv.org/abs/2102.05918)
+- [CoCa](https://arxiv.org/abs/2205.01917)
+- [BLIP-2](https://arxiv.org/abs/2301.12597)
+- [PaLM-E](https://arxiv.org/abs/2303.03378)
+
+### Practitioner checklist
+- Keep modality encoders strong (init from pretrained) and freeze early if data is limited
+- Normalize embeddings before contrastive training; schedule temperature properly
+- Curate high-quality text-image pairs; apply strong text normalization and filtering
+- Evaluate zero-shot, retrieval, and fine-tuned task metrics (Recall@K, mAP, top-1)

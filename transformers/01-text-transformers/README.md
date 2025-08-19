@@ -472,3 +472,28 @@ def generate_text(model, src, max_length, device):
 - [BERT: Pre-training of Deep Bidirectional Transformers](https://arxiv.org/abs/1810.04805)
 - [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
 - [Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer](https://arxiv.org/abs/1910.10683)
+
+## 🔎 Curated Resources and Further Study
+
+### Official docs & high-quality guides
+- [Hugging Face Transformers documentation](https://huggingface.co/docs/transformers)
+- [The Annotated Transformer (HarvardNLP)](http://nlp.seas.harvard.edu/annotated-transformer/)
+- [fast.ai: A Code-First Intro to NLP](https://www.fast.ai/2020/07/25/fastai-nlp/)
+
+### Reference implementations & libraries
+- [facebookresearch/fairseq](https://github.com/facebookresearch/fairseq)
+- [NVIDIA/Megatron-LM](https://github.com/NVIDIA/Megatron-LM)
+- [HuggingFace/transformers](https://github.com/huggingface/transformers)
+
+### Selected papers beyond the basics
+- [GPT-3: Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165)
+- [RoBERTa: A Robustly Optimized BERT Pretraining Approach](https://arxiv.org/abs/1907.11692)
+- [T5: Exploring the Limits of Transfer Learning](https://arxiv.org/abs/1910.10683)
+- [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
+
+### Practitioner checklist
+- Understand masking (padding vs causal) and how it affects attention
+- Validate tokenization and special tokens (pad, bos/eos, cls/sep)
+- Start with a strong pretrained checkpoint; fine-tune with proper LR schedule (warmup + cosine/linear decay)
+- Track metrics (perplexity, accuracy, F1, BLEU/ROUGE as appropriate)
+- Profile memory and speed (batch size, sequence length, gradient accumulation)

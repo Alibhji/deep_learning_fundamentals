@@ -79,6 +79,23 @@ This tutorial walks through building and deploying a minimal vision transformer-
 - Apache TVM: https://tvm.apache.org/
 - TinyML Book: Warden & Situnayake, 2019
 
+## 🔎 Curated Resources and Further Study
+
+### Deployment stacks
+- TFLite Micro guide: https://www.tensorflow.org/lite/microcontrollers
+- ONNX Runtime for ARM: https://onnxruntime.ai/
+- TVM microTVM tutorial: https://tvm.apache.org/docs/tutorial/index.html
+
+### Optimization recipes
+- Quantization-aware training for vision: TF/Torch tutorials
+- Pruning and structured sparsity for embedded inference
+- Memory budgeting: static tensor arenas, scratch buffers, allocator limits
+
+### Practitioner checklist
+- Fix input pipeline first (resize/normalize) and verify calibration for INT8
+- Ensure power/thermal constraints are met; prefer fixed-point where possible
+- Keep model small and simple; validate latency on-target with real sensor data
+
 ---
 
 See `tiny_vit_embedded.py` and the notebook for an end-to-end example including export and dummy inference on host. For real deployment, swap dummy weights for trained weights and retest quantization accuracy.

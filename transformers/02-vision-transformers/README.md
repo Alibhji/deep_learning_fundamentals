@@ -626,3 +626,26 @@ swin_config = {
 - [Swin Transformer: Hierarchical Vision Transformer using Shifted Windows](https://arxiv.org/abs/2103.14030)
 - [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
 - [SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers](https://arxiv.org/abs/2105.15203)
+
+## 🔎 Curated Resources and Further Study
+
+### Official repos & strong tutorials
+- ViT: [google-research/vision_transformer](https://github.com/google-research/vision_transformer)
+- DeiT: [facebookresearch/deit](https://github.com/facebookresearch/deit)
+- Swin: [microsoft/Swin-Transformer](https://github.com/microsoft/Swin-Transformer)
+- DETR: [facebookresearch/detr](https://github.com/facebookresearch/detr)
+- SegFormer: [NVlabs/SegFormer](https://github.com/NVlabs/SegFormer)
+- Great tutorial collection: [NielsRogge/Transformers-Tutorials](https://github.com/NielsRogge/Transformers-Tutorials)
+
+### Papers & surveys
+- [An Image is Worth 16x16 Words (ViT)](https://arxiv.org/abs/2010.11929)
+- [DETR: End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
+- [Swin Transformer](https://arxiv.org/abs/2103.14030)
+- [Mask2Former: Unified architecture for segmentation](https://arxiv.org/abs/2112.01527)
+
+### Practitioner checklist
+- Choose patch size carefully (trade-off between compute and resolution)
+- Always augment (RandAugment/ColorJitter/Mixup/CutMix) and tune regularizers
+- Warmup + cosine LR; monitor training stability (gradient norm, loss curves)
+- For detection/segmentation, use strong backbones or multi-scale features (Deformable DETR/Swin)
+- For deployment, profile with FP16/BF16, try ONNX/TensorRT, and consider quantization

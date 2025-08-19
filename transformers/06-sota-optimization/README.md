@@ -76,6 +76,24 @@ This module covers state-of-the-art techniques to optimize transformer models fo
 - Shazeer, 2019 — LAMB Optimizer (arXiv:1904.00962)
 - Liu et al., 2023 — Sophia (arXiv:2305.14342)
 
+## 🔎 Curated Resources and Further Study
+
+### Libraries & runtimes
+- [vLLM](https://github.com/vllm-project/vllm) — PagedAttention, high-throughput serving
+- [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) — optimized LLM inference
+- [DeepSpeed ZeRO](https://github.com/microsoft/DeepSpeed) — sharded training
+- [PyTorch FSDP docs](https://pytorch.org/docs/stable/fsdp.html)
+
+### Quantization & PEFT
+- [bitsandbytes (8-bit/4-bit)](https://github.com/TimDettmers/bitsandbytes)
+- [QLoRA paper](https://arxiv.org/abs/2305.14314) and implementations
+- [GPTQ](https://arxiv.org/abs/2210.17323), [AWQ](https://arxiv.org/abs/2306.00978)
+
+### Practitioner checklist
+- For serving, benchmark vLLM vs TensorRT-LLM for your workload
+- For finetuning on consumer GPUs, prefer QLoRA with 4-bit weights + LoRA adapters
+- Use torch.compile/Inductor where stable; fall back to BetterTransformer/ONNX/TensorRT when needed
+
 ---
 
 This folder includes runnable templates and a companion notebook showcasing the above techniques on toy models, and pointers to integrate with real stacks (DeepSpeed, FSDP, vLLM, TensorRT-LLM).

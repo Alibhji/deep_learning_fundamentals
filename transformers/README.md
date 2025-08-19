@@ -40,7 +40,7 @@ Welcome to the comprehensive learning path for understanding Transformers, Encod
 - **Quantization (QLoRA, GPTQ, AWQ), vLLM/TensorRT-LLM**
 - **torch.compile/Inductor, BetterTransformer, KV cache**
 
-git ### 7. [Embedded Vision Deployment (32×32 Human/Not-Human)](./07-embedded-vision/README.md)
+### 7. [Embedded Vision Deployment (32×32 Human/Not-Human)](./07-embedded-vision/README.md)
 - **Tiny ViT-like model**: 32×32 input, boolean output
 - **Export**: ONNX/TFLite, INT8 quantization
 - **Deploy**: MCU (TFLite Micro) or ARM SoC (ONNX Runtime)

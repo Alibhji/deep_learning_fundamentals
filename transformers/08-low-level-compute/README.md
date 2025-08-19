@@ -90,3 +90,19 @@ for n, p in model.named_parameters():
 
 See the companion notebook for annotated code, parameter dumps, and profiling tips.
 
+## 🔎 Curated Resources and Further Study
+
+### GPU architecture & profiling
+- NVIDIA CUDA Programming Guide and Best Practices
+- Nsight Systems / Nsight Compute docs
+- CUTLASS (CUDA Templates for Linear Algebra): https://github.com/NVIDIA/cutlass
+
+### Kernel libraries & references
+- FlashAttention kernels (HazyResearch): https://github.com/HazyResearch/flash-attention
+- xFormers attention variants (Meta): https://github.com/facebookresearch/xformers
+
+### Practitioner checklist
+- Profile kernels to identify memory vs compute bottlenecks (roofline model)
+- Align tensor shapes with kernel tile sizes; minimize non-coalesced loads
+- Use half precision / tensor cores when numerically safe
+

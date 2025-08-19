@@ -522,3 +522,20 @@ class MultiQueryAttention(nn.Module):
 - [Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation](https://arxiv.org/abs/2108.12409)
 - [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135)
 - [Sophia: A Scalable Stochastic Second-order Optimizer for Language Model Pre-training](https://arxiv.org/abs/2305.14342)
+
+## 🔎 Curated Resources and Further Study
+
+### Libraries & kernels
+- [HazyResearch/flash-attention](https://github.com/HazyResearch/flash-attention)
+- [facebookresearch/xformers](https://github.com/facebookresearch/xformers)
+
+### Key papers
+- [RoPE / RoFormer](https://arxiv.org/abs/2104.09864)
+- [ALiBi](https://arxiv.org/abs/2108.12409)
+- [FlashAttention v2](https://arxiv.org/abs/2307.08691)
+- [Longformer / BigBird (long context)](https://arxiv.org/abs/2004.05150), (https://arxiv.org/abs/2007.14062)
+
+### Practitioner checklist
+- Prefer BF16 where possible for stability; use FP16 with care (loss scaling)
+- Use fused kernels (FlashAttention/xFormers) when supported; validate numerics
+- Verify extrapolation behavior when changing context windows (RoPE scaling/ALiBi)
