@@ -38,39 +38,39 @@ class CLIP(nn.Module):
         
     def encode_text(self, text_inputs):
         """Encode text inputs"""
-        text_features = self.text_encoder(**text_inputs).last_hidden_state
+        text_features = self.text_encoder(**text_inputs).last_hidden_state  # (B, N_text, hidden)
         
         # Use [CLS] token representation
-        text_features = text_features[:, 0, :]  # (batch_size, hidden_size)
+        text_features = text_features[:, 0, :]  # (B, hidden)
         
         # Project to common space
-        text_embeddings = self.text_projection(text_features)
+        text_embeddings = self.text_projection(text_features)  # (B, embed_dim)
         
         # Normalize
-        text_embeddings = F.normalize(text_embeddings, dim=-1)
+        text_embeddings = F.normalize(text_embeddings, dim=-1)  # (B, embed_dim)
         
         return text_embeddings
     
     def encode_image(self, image_inputs):
         """Encode image inputs"""
-        image_features = self.image_encoder(image_inputs).pooler_output
+        image_features = self.image_encoder(image_inputs).pooler_output  # (B, hidden)
         
         # Project to common space
-        image_embeddings = self.image_projection(image_features)
+        image_embeddings = self.image_projection(image_features)  # (B, embed_dim)
         
         # Normalize
-        image_embeddings = F.normalize(image_embeddings, dim=-1)
+        image_embeddings = F.normalize(image_embeddings, dim=-1)  # (B, embed_dim)
         
         return image_embeddings
     
     def forward(self, text_inputs, image_inputs):
         """Forward pass for CLIP"""
         # Encode text and images
-        text_embeddings = self.encode_text(text_inputs)
-        image_embeddings = self.encode_image(image_inputs)
+        text_embeddings = self.encode_text(text_inputs)   # (B, E)
+        image_embeddings = self.encode_image(image_inputs)  # (B, E)
         
         # Compute similarity matrix
-        logits = torch.matmul(text_embeddings, image_embeddings.T) / self.temperature
+        logits = torch.matmul(text_embeddings, image_embeddings.T) / self.temperature  # (B, B)
         
         return logits, text_embeddings, image_embeddings
 

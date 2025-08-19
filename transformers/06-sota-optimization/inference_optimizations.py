@@ -11,8 +11,8 @@ import torch.nn as nn
 
 def init_kv_cache(max_batches: int, max_seq: int, num_heads: int, head_dim: int, device=None):
     device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
-    k_cache = torch.zeros(max_batches, num_heads, max_seq, head_dim, device=device)
-    v_cache = torch.zeros_like(k_cache)
+    k_cache = torch.zeros(max_batches, num_heads, max_seq, head_dim, device=device)  # (B, H, N, D_k)
+    v_cache = torch.zeros_like(k_cache)  # (B, H, N, D_v)
     return {'k': k_cache, 'v': v_cache, 'pos': torch.zeros(max_batches, dtype=torch.long, device=device)}
 
 

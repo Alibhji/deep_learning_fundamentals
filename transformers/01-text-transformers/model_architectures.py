@@ -44,18 +44,18 @@ class EncoderOnlyTransformer(nn.Module):
         
     def forward(self, input_ids, attention_mask=None):
         # Token embeddings
-        x = self.token_embedding(input_ids)
+        x = self.token_embedding(input_ids)  # (B, N, d_model)
         
         # Add positional encoding
-        x = self.positional_encoding(x)
-        x = self.dropout(x)
+        x = self.positional_encoding(x)  # (B, N, d_model)
+        x = self.dropout(x)  # (B, N, d_model)
         
         # Apply encoder layers
         for layer in self.encoder_layers:
-            x = layer(x, attention_mask)
+            x = layer(x, attention_mask)  # (B, N, d_model)
         
         # Final normalization
-        x = self.norm(x)
+        x = self.norm(x)  # (B, N, d_model)
         
         return x
 
@@ -92,19 +92,19 @@ class DecoderOnlyTransformer(nn.Module):
         
     def forward(self, input_ids, attention_mask=None):
         # Token embeddings
-        x = self.token_embedding(input_ids)
+        x = self.token_embedding(input_ids)  # (B, N, d_model)
         
         # Add positional encoding
-        x = self.positional_encoding(x)
-        x = self.dropout(x)
+        x = self.positional_encoding(x)  # (B, N, d_model)
+        x = self.dropout(x)  # (B, N, d_model)
         
         # Apply decoder layers
         for layer in self.decoder_layers:
-            x = layer(x, attention_mask)
+            x = layer(x, attention_mask)  # (B, N, d_model)
         
         # Final normalization and projection
-        x = self.norm(x)
-        logits = self.output_projection(x)
+        x = self.norm(x)  # (B, N, d_model)
+        logits = self.output_projection(x)  # (B, N, vocab)
         
         return logits
 
@@ -147,38 +147,38 @@ class EncoderDecoderTransformer(nn.Module):
         
     def encode(self, input_ids, attention_mask=None):
         """Encode the input sequence -> (B, N_src, D_model)"""
-        x = self.token_embedding(input_ids)
-        x = self.positional_encoding(x)
-        x = self.dropout(x)
+        x = self.token_embedding(input_ids)  # (B, N_src, d_model)
+        x = self.positional_encoding(x)  # (B, N_src, d_model)
+        x = self.dropout(x)  # (B, N_src, d_model)
         
         for layer in self.encoder:
-            x = layer(x, attention_mask)
+            x = layer(x, attention_mask)  # (B, N_src, d_model)
         
         return x
     
     def decode(self, decoder_input_ids, encoder_outputs, attention_mask=None, 
                decoder_attention_mask=None):
         """Decode the sequence using encoder outputs -> (B, N_tgt, vocab_size)"""
-        x = self.token_embedding(decoder_input_ids)
-        x = self.positional_encoding(x)
-        x = self.dropout(x)
+        x = self.token_embedding(decoder_input_ids)  # (B, N_tgt, d_model)
+        x = self.positional_encoding(x)  # (B, N_tgt, d_model)
+        x = self.dropout(x)  # (B, N_tgt, d_model)
         
         for layer in self.decoder:
-            x = layer(x, encoder_outputs, attention_mask, decoder_attention_mask)
+            x = layer(x, encoder_outputs, attention_mask, decoder_attention_mask)  # (B, N_tgt, d_model)
         
-        x = self.norm(x)
-        logits = self.output_projection(x)
+        x = self.norm(x)  # (B, N_tgt, d_model)
+        logits = self.output_projection(x)  # (B, N_tgt, vocab)
         
         return logits
     
     def forward(self, input_ids, decoder_input_ids, attention_mask=None, 
                 decoder_attention_mask=None):
         # Encode
-        encoder_outputs = self.encode(input_ids, attention_mask)
+        encoder_outputs = self.encode(input_ids, attention_mask)  # (B, N_src, d_model)
         
         # Decode
         logits = self.decode(decoder_input_ids, encoder_outputs, 
-                           attention_mask, decoder_attention_mask)
+                           attention_mask, decoder_attention_mask)  # (B, N_tgt, vocab)
         
         return logits
 
@@ -203,12 +203,12 @@ class EncoderLayer(nn.Module):
         
     def forward(self, x, attention_mask=None):
         # Self-attention
-        attn_output, _ = self.self_attention(x, x, x, attention_mask)
-        x = self.norm1(x + self.dropout(attn_output))
+        attn_output, _ = self.self_attention(x, x, x, attention_mask)  # (B, N, d_model)
+        x = self.norm1(x + self.dropout(attn_output))  # (B, N, d_model)
         
         # Feed-forward
-        ff_output = self.feed_forward(x)
-        x = self.norm2(x + self.dropout(ff_output))
+        ff_output = self.feed_forward(x)  # (B, N, d_model)
+        x = self.norm2(x + self.dropout(ff_output))  # (B, N, d_model)
         
         return x
 
@@ -236,17 +236,17 @@ class DecoderLayer(nn.Module):
     def forward(self, x, encoder_outputs, attention_mask=None, 
                 decoder_attention_mask=None):
         # Self-attention
-        attn_output, _ = self.self_attention(x, x, x, decoder_attention_mask)
-        x = self.norm1(x + self.dropout(attn_output))
+        attn_output, _ = self.self_attention(x, x, x, decoder_attention_mask)  # (B, N_tgt, d_model)
+        x = self.norm1(x + self.dropout(attn_output))  # (B, N_tgt, d_model)
         
         # Cross-attention
         cross_attn_output, _ = self.cross_attention(x, encoder_outputs, 
-                                                  encoder_outputs, attention_mask)
-        x = self.norm2(x + self.dropout(cross_attn_output))
+                                                  encoder_outputs, attention_mask)  # (B, N_tgt, d_model)
+        x = self.norm2(x + self.dropout(cross_attn_output))  # (B, N_tgt, d_model)
         
         # Feed-forward
-        ff_output = self.feed_forward(x)
-        x = self.norm3(x + self.dropout(ff_output))
+        ff_output = self.feed_forward(x)  # (B, N_tgt, d_model)
+        x = self.norm3(x + self.dropout(ff_output))  # (B, N_tgt, d_model)
         
         return x
 

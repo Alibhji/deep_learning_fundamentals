@@ -30,18 +30,18 @@ class PatchEmbedding(nn.Module):
         self.projection = nn.Linear(patch_size * patch_size * in_channels, embed_dim)
         
     def forward(self, x):
-        batch_size = x.shape[0]
+        batch_size = x.shape[0]  # (B)
         
         # x: (batch_size, channels, height, width)
         # Create patches: (batch_size, n_patches, patch_size * patch_size * channels)
         patches = x.unfold(2, self.patch_size, self.patch_size).unfold(
             3, self.patch_size, self.patch_size
-        ).contiguous()
+        ).contiguous()  # (B, C, H/ps, W/ps, ps, ps)
         
-        patches = patches.view(batch_size, -1, self.patch_size * self.patch_size * x.shape[1])
+        patches = patches.view(batch_size, -1, self.patch_size * self.patch_size * x.shape[1])  # (B, N, ps*ps*C)
         
         # Project to embedding dimension
-        embeddings = self.projection(patches)
+        embeddings = self.projection(patches)  # (B, N, d_model)
         
         return embeddings
 
@@ -62,9 +62,9 @@ class ConvPatchEmbedding(nn.Module):
         
     def forward(self, x):
         # x: (batch_size, channels, height, width)
-        x = self.projection(x)  # (batch_size, embed_dim, H//patch_size, W//patch_size)
-        x = x.flatten(2)  # (batch_size, embed_dim, n_patches)
-        x = x.transpose(1, 2)  # (batch_size, n_patches, embed_dim)
+        x = self.projection(x)  # (B, d_model, H/ps, W/ps)
+        x = x.flatten(2)  # (B, d_model, N)
+        x = x.transpose(1, 2)  # (B, N, d_model)
         
         return x
 
@@ -109,30 +109,30 @@ class VisionTransformer(nn.Module):
         nn.init.trunc_normal_(self.patch_embed.projection.weight, std=0.02)
         
     def forward(self, x):
-        batch_size = x.shape[0]
+        batch_size = x.shape[0]  # (B)
         
         # Patch embedding
-        x = self.patch_embed(x)  # (batch_size, n_patches, embed_dim)
+        x = self.patch_embed(x)  # (B, N, d_model)
         
         # Add class token
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        x = torch.cat([cls_tokens, x], dim=1)  # (batch_size, n_patches + 1, embed_dim)
+        cls_tokens = self.cls_token.expand(batch_size, -1, -1)  # (B, 1, d_model)
+        x = torch.cat([cls_tokens, x], dim=1)  # (B, N+1, d_model)
         
         # Add position embeddings
-        x = x + self.pos_embed
+        x = x + self.pos_embed  # (B, N+1, d_model)
         
         # Pass through transformer encoder
         for layer in self.encoder_layers:
-            x = layer(x)
+            x = layer(x)  # (B, N+1, d_model)
         
         # Layer normalization
-        x = self.ln_post(x)
+        x = self.ln_post(x)  # (B, N+1, d_model)
         
         # Extract class token for classification
-        cls_token = x[:, 0]
+        cls_token = x[:, 0]  # (B, d_model)
         
         # Classification
-        logits = self.head(cls_token)
+        logits = self.head(cls_token)  # (B, num_classes)
         
         return logits
 
@@ -185,28 +185,28 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, x):
-        batch_size, seq_len, _ = x.shape
+        batch_size, seq_len, _ = x.shape  # (B, N, d_model)
         
         # Linear projections and reshape
-        Q = self.W_q(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        K = self.W_k(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        V = self.W_v(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        Q = self.W_q(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)  # (B, H, N, D_k)
+        K = self.W_k(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)  # (B, H, N, D_k)
+        V = self.W_v(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)  # (B, H, N, D_k)
         
         # Compute attention
-        scores = torch.matmul(Q, K.transpose(-2, -1))
+        scores = torch.matmul(Q, K.transpose(-2, -1))  # (B, H, N, N)
         scores = scores / math.sqrt(self.d_k)
-        attention_weights = F.softmax(scores, dim=-1)
+        attention_weights = F.softmax(scores, dim=-1)  # (B, H, N, N)
         attention_weights = self.dropout(attention_weights)
         
         # Apply attention
-        attended = torch.matmul(attention_weights, V)
+        attended = torch.matmul(attention_weights, V)  # (B, H, N, D_k)
         
         # Reshape and project output
         attended = attended.transpose(1, 2).contiguous().view(
             batch_size, seq_len, self.d_model
-        )
+        )  # (B, N, d_model)
         
-        return self.W_o(attended)
+        return self.W_o(attended)  # (B, N, d_model)
 
 
 def restore_batch_from_flat_embeddings(flat_embeddings: torch.Tensor, batch_size: int, num_patches: int) -> torch.Tensor:

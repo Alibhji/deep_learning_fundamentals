@@ -31,7 +31,7 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         self.attention = nn.MultiheadAttention(d_model, num_heads)
     def forward(self, x):
-        return self.attention(x, x, x)[0]
+        return self.attention(x, x, x)[0]  # (T, B, D)
 
 class TransformerLayer(nn.Module):
     """Minimal transformer layer: attention + linear FFN (demo)."""
@@ -40,7 +40,7 @@ class TransformerLayer(nn.Module):
         self.attention = MultiHeadAttention(d_model, num_heads)
         self.ff = nn.Linear(d_model, d_model)
     def forward(self, x):
-        return self.ff(self.attention(x))
+        return self.ff(self.attention(x))  # (T, B, D)
 
 class EncoderOnlyTransformer(nn.Module):
     """Toy encoder-only model for example training in this script."""
@@ -50,10 +50,10 @@ class EncoderOnlyTransformer(nn.Module):
         self.layers = nn.ModuleList([TransformerLayer(d_model, num_heads, d_model*4) for _ in range(num_layers)])
         self.output = nn.Linear(d_model, vocab_size)
     def forward(self, x):
-        x = self.embedding(x)
+        x = self.embedding(x)  # (B, N, D)
         for layer in self.layers:
-            x = x + layer(x)
-        return self.output(x)
+            x = x + layer(x)  # (B, N, D)
+        return self.output(x)  # (B, N, V)
 
 class VisionTransformer(nn.Module):
     """Toy ViT-like model (heavily simplified) for example training."""
@@ -65,11 +65,11 @@ class VisionTransformer(nn.Module):
     def forward(self, x):
         # Simplified patch embedding
         batch_size = x.shape[0]
-        x = x.view(batch_size, -1, 3 * 16 * 16)  # Assume patch_size=16
-        x = self.patch_embed(x)
+        x = x.view(batch_size, -1, 3 * 16 * 16)  # (B, N, P)
+        x = self.patch_embed(x)  # (B, N, D)
         for layer in self.layers:
-            x = x + layer(x)
-        return self.output(x.mean(dim=1))
+            x = x + layer(x)  # (B, N, D)
+        return self.output(x.mean(dim=1))  # (B, num_classes)
 
 class CLIP(nn.Module):
     def __init__(self, embed_dim=512):
@@ -77,9 +77,9 @@ class CLIP(nn.Module):
         self.text_encoder = nn.Linear(512, embed_dim)
         self.image_encoder = nn.Linear(3*224*224, embed_dim)
     def forward(self, text_inputs, images):
-        text_emb = self.text_encoder(text_inputs['input_ids'].float())
-        image_emb = self.image_encoder(images.view(images.shape[0], -1))
-        logits = torch.matmul(text_emb, image_emb.T)
+        text_emb = self.text_encoder(text_inputs['input_ids'].float())  # (B, E)
+        image_emb = self.image_encoder(images.view(images.shape[0], -1))  # (B, E)
+        logits = torch.matmul(text_emb, image_emb.T)  # (B, B)
         return logits, text_emb, image_emb
 
 class StandardTransformer(nn.Module):

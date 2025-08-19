@@ -74,23 +74,23 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, Q, K, V, mask=None):
-        batch_size = Q.size(0)
+        batch_size = Q.size(0)  # (B)
         
         # Linear projections and reshape to (B, H, N, D_k)
-        Q = self.W_q(Q).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        K = self.W_k(K).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        V = self.W_v(V).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        Q = self.W_q(Q).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)  # (B, H, N, D_k)
+        K = self.W_k(K).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)  # (B, H, N, D_k)
+        V = self.W_v(V).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)  # (B, H, N, D_k)
         
         # Apply attention
-        attention_output, attention_weights = scaled_dot_product_attention(Q, K, V, mask)
+        attention_output, attention_weights = scaled_dot_product_attention(Q, K, V, mask)  # output: (B, H, N, D_k), weights: (B, H, N, N)
         
         # Concatenate heads
         attention_output = attention_output.transpose(1, 2).contiguous().view(
             batch_size, -1, self.d_model
-        )
+        )  # (B, N, d_model)
         
         # Final linear projection
-        output = self.W_o(attention_output)
+        output = self.W_o(attention_output)  # (B, N, d_model)
         
         return output, attention_weights
 
@@ -113,7 +113,7 @@ class SinusoidalPositionalEncoding(nn.Module):
         self.register_buffer('pe', pe.unsqueeze(0))
         
     def forward(self, x):
-        return x + self.pe[:, :x.size(1)]
+        return x + self.pe[:, :x.size(1)]  # (B, N, d_model)
 
 
 class LearnedPositionalEmbedding(nn.Module):
@@ -124,8 +124,8 @@ class LearnedPositionalEmbedding(nn.Module):
         self.embedding = nn.Embedding(max_seq_len, d_model)
         
     def forward(self, x):
-        positions = torch.arange(x.size(1), device=x.device)
-        return self.embedding(positions).unsqueeze(0)
+        positions = torch.arange(x.size(1), device=x.device)  # (N)
+        return self.embedding(positions).unsqueeze(0)  # (1, N, d_model)
 
 
 class TransformerLayer(nn.Module):
@@ -148,12 +148,12 @@ class TransformerLayer(nn.Module):
         
     def forward(self, x, mask=None):
         # Self-attention with residual connection
-        attn_output, _ = self.self_attention(x, x, x, mask)
-        x = self.norm1(x + self.dropout(attn_output))
+        attn_output, _ = self.self_attention(x, x, x, mask)  # attn_output: (B, N, d_model)
+        x = self.norm1(x + self.dropout(attn_output))  # (B, N, d_model)
         
         # Feed-forward with residual connection
-        ff_output = self.feed_forward(x)
-        x = self.norm2(x + self.dropout(ff_output))
+        ff_output = self.feed_forward(x)  # (B, N, d_model)
+        x = self.norm2(x + self.dropout(ff_output))  # (B, N, d_model)
         
         return x
 

@@ -41,7 +41,7 @@ class MixedPrecisionTrainer:
     def forward_with_autocast(self, fn, *args, **kwargs):
         dtype = torch.bfloat16 if self.use_bf16 else torch.float16
         with autocast(dtype=dtype):
-            return fn(*args, **kwargs)
+            return fn(*args, **kwargs)  # output: arbitrary, follows fn
 
 
 def enable_gradient_checkpointing(module: nn.Module):
@@ -119,8 +119,8 @@ class Sophia(torch.optim.Optimizer):
 
 def training_step(model, batch, criterion, trainer: MixedPrecisionTrainer):
     def forward():
-        outputs = model(**batch)
-        loss = criterion(outputs, batch['labels'])
+        outputs = model(**batch)  # shapes depend on model; e.g., (B, N, V)
+        loss = criterion(outputs, batch['labels'])  # scalar
         return loss
     loss = trainer.forward_with_autocast(forward)
     value = trainer.step(loss)

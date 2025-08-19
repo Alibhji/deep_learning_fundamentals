@@ -33,7 +33,7 @@ class LinearAttention(nn.Module):
         self.W_o = nn.Linear(d_model, d_model)
         
     def forward(self, x):
-        batch_size, seq_len, _ = x.shape
+        batch_size, seq_len, _ = x.shape  # (B, N, d_model)
         
         # Linear projections
         Q = self.W_q(x)
