@@ -71,6 +71,13 @@ Where:
 3. **Apply Softmax**: Convert to probabilities
 4. **Weight Values**: Multiply with V
 
+
+The raw scores (from Q @ K.transpose(-2, -1)) are similarity logits between every pair of tokens.
+
+After scaling and softmax, they become attention weights (probabilities).
+
+Shape: [batch, heads, seq_len, seq_len]
+
 ### Code Implementation
 
 ```python
