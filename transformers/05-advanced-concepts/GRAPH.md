@@ -1,3 +1,6 @@
+# Advanced Attention Concepts Flowchart
+
+```mermaid
 flowchart TD
     X["Tokens (B, N, d)"] --> SELECT["Choose Attention Variant"]
     SELECT --> STD["Standard (O(N^2))"]
@@ -8,3 +11,4 @@ flowchart TD
     LIN --> OUT
     SPR --> OUT
     LOC --> OUT
+```

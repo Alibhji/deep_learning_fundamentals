@@ -1,3 +1,6 @@
+# Low-Level Compute Flowchart
+
+```mermaid
 flowchart TD
     PIX["Pixel (CPU RAM)"] --> PRE["Preprocess / Normalize"]
     PRE --> DMA["DMA → GPU HBM"]
@@ -7,3 +10,4 @@ flowchart TD
     MHA --> FFN["FFN GEMMs"]
     FFN --> LOGIT["Logit"]
     LOGIT --> OUT["Host readback / Serve"]
+```
