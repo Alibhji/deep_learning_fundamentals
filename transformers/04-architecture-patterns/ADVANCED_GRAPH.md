@@ -3,40 +3,40 @@
 ```mermaid
 flowchart TD
     subgraph "Encoder-Only Architecture"
-        SRC1["Source Input (B, N_src, d_model)"] --> ENC1["Encoder Stack<br/>L encoder layers<br/>Self-attention + FFN + Residual+LN"]
-        ENC1 --> MEM1["Encoded Memory<br/>(B, N_src, d_model)"]
-        MEM1 --> HEAD1["Task-Specific Head<br/>Classification/Regression/Generation"]
+        SRC1["Source Input (B, N_src, d_model)"] --> ENC1["Encoder Stack\nL encoder layers\nSelf-attention + FFN + Residual+LN"]
+        ENC1 --> MEM1["Encoded Memory\n(B, N_src, d_model)"]
+        MEM1 --> HEAD1["Task-Specific Head\nClassification/Regression/Generation"]
     end
     
     subgraph "Decoder-Only Architecture"
-        TGT1["Target Input (B, N_tgt, d_model)"] --> MASK1["Causal Mask<br/>Prevent attending to future tokens"]
-        MASK1 --> DEC1["Decoder Stack<br/>L decoder layers<br/>Masked self-attention + FFN + Residual+LN"]
-        DEC1 --> OUT1["Output Projection<br/>Linear(d_model, vocab_size)"]
+        TGT1["Target Input (B, N_tgt, d_model)"] --> MASK1["Causal Mask\nPrevent attending to future tokens"]
+        MASK1 --> DEC1["Decoder Stack\nL decoder layers\nMasked self-attention + FFN + Residual+LN"]
+        DEC1 --> OUT1["Output Projection\nLinear(d_model, vocab_size)"]
     end
     
     subgraph "Encoder-Decoder Architecture"
-        SRC2["Source Input (B, N_src, d_model)"] --> ENC2["Encoder Stack<br/>L encoder layers<br/>Self-attention + FFN + Residual+LN"]
-        ENC2 --> MEM2["Encoded Memory<br/>(B, N_src, d_model)"]
+        SRC2["Source Input (B, N_src, d_model)"] --> ENC2["Encoder Stack\nL encoder layers\nSelf-attention + FFN + Residual+LN"]
+        ENC2 --> MEM2["Encoded Memory\n(B, N_src, d_model)"]
         TGT2["Target Input (B, N_tgt, d_model)"] --> MASK2["Causal Mask"]
-        MASK2 --> DEC2["Decoder Stack<br/>L decoder layers"]
-        DEC2 --> CROSS["Cross-Attention<br/>Target queries attend to encoded source<br/>Q: target, K/V: source memory"]
+        MASK2 --> DEC2["Decoder Stack\nL decoder layers"]
+        DEC2 --> CROSS["Cross-Attention\nTarget queries attend to encoded source\nQ: target, K/V: source memory"]
         MEM2 --> CROSS
-        CROSS --> FFN2["Feed-Forward Network<br/>Linear + ReLU + Linear"]
-        FFN2 --> OUT2["Output Projection<br/>Linear(d_model, vocab_size)"]
+        CROSS --> FFN2["Feed-Forward Network\nLinear + ReLU + Linear"]
+        FFN2 --> OUT2["Output Projection\nLinear(d_model, vocab_size)"]
     end
     
     subgraph "Connection Patterns"
-        RESIDUAL["Residual Connections<br/>x + sublayer(x)<br/>Gradient flow preservation"]
-        SKIP["Skip Connections<br/>Bypass multiple layers<br/>DenseNet-style connectivity"]
-        SHARED["Shared Parameters<br/>Encoder-decoder weight sharing<br/>Reduced parameter count"]
-        PARALLEL["Parallel Processing<br/>Encoder and decoder run simultaneously<br/>Reduced latency"]
+        RESIDUAL["Residual Connections\nx + sublayer(x)\nGradient flow preservation"]
+        SKIP["Skip Connections\nBypass multiple layers\nDenseNet-style connectivity"]
+        SHARED["Shared Parameters\nEncoder-decoder weight sharing\nReduced parameter count"]
+        PARALLEL["Parallel Processing\nEncoder and decoder run simultaneously\nReduced latency"]
     end
     
     subgraph "Cross-Attention Mechanisms"
-        STANDARD["Standard Cross-Attention<br/>Q: target, K/V: source<br/>Full attention matrix"]
-        MULTI_QUERY["Multi-Query Attention<br/>Shared K/V across heads<br/>Reduced memory usage"]
-        SPARSE["Sparse Cross-Attention<br/>Attend to subset of source<br/>Improved efficiency"]
-        LOCAL["Local Cross-Attention<br/>Window-based attention<br/>Linear complexity"]
+        STANDARD["Standard Cross-Attention\nQ: target, K/V: source\nFull attention matrix"]
+        MULTI_QUERY["Multi-Query Attention\nShared K/V across heads\nReduced memory usage"]
+        SPARSE["Sparse Cross-Attention\nAttend to subset of source\nImproved efficiency"]
+        LOCAL["Local Cross-Attention\nWindow-based attention\nLinear complexity"]
     end
     
     subgraph "Key Parameters"

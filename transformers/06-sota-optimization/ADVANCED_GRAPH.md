@@ -3,53 +3,53 @@
 ```mermaid
 flowchart TD
     subgraph "Training Optimizations"
-        MODEL["Transformer Model"] --> MIXED["Mixed Precision Training<br/>AMP (FP16) / BF16<br/>GradScaler for stability<br/>Memory: ~50% reduction"]
+        MODEL["Transformer Model"] --> MIXED["Mixed Precision Training\nAMP (FP16) / BF16\nGradScaler for stability\nMemory: ~50% reduction"]
         
-        MIXED --> CHECKPOINT["Gradient Checkpointing<br/>Trade compute for memory<br/>Recompute activations<br/>Memory: ~70% reduction"]
+        MIXED --> CHECKPOINT["Gradient Checkpointing\nTrade compute for memory\nRecompute activations\nMemory: ~70% reduction"]
         
-        CHECKPOINT --> DISTRIBUTED["Distributed Training<br/>DDP: Data parallelism<br/>FSDP: Model sharding<br/>ZeRO: Optimizer sharding"]
+        CHECKPOINT --> DISTRIBUTED["Distributed Training\nDDP: Data parallelism\nFSDP: Model sharding\nZeRO: Optimizer sharding"]
         
-        DISTRIBUTED --> OPTIMIZER["Advanced Optimizers<br/>AdamW: General purpose<br/>Lion: Low memory<br/>Sophia: Pre-training stability"]
+        DISTRIBUTED --> OPTIMIZER["Advanced Optimizers\nAdamW: General purpose\nLion: Low memory\nSophia: Pre-training stability"]
     end
     
     subgraph "Inference Optimizations"
-        MODEL --> KV_CACHE["KV Cache Optimization<br/>PagedAttention (vLLM)<br/>Block-wise memory management<br/>Throughput: 10-100x improvement"]
+        MODEL --> KV_CACHE["KV Cache Optimization\nPagedAttention (vLLM)\nBlock-wise memory management\nThroughput: 10-100x improvement"]
         
-        KV_CACHE --> COMPILE["Model Compilation<br/>torch.compile (Inductor)<br/>TensorRT-LLM<br/>ONNX Runtime optimization"]
+        KV_CACHE --> COMPILE["Model Compilation\ntorch.compile (Inductor)\nTensorRT-LLM\nONNX Runtime optimization"]
         
-        COMPILE --> QUANT["Quantization<br/>PTQ: Post-training (GPTQ, AWQ)<br/>QAT: Quantization-aware training<br/>4-bit: QLoRA, 8-bit: LLM.int8"]
+        COMPILE --> QUANT["Quantization\nPTQ: Post-training (GPTQ, AWQ)\nQAT: Quantization-aware training\n4-bit: QLoRA, 8-bit: LLM.int8"]
     end
     
     subgraph "Memory Management"
-        DISTRIBUTED --> FSDP["FSDP Implementation<br/>FullyShardedDataParallel<br/>Auto-wrap policy<br/>Mixed precision support"]
+        DISTRIBUTED --> FSDP["FSDP Implementation\nFullyShardedDataParallel\nAuto-wrap policy\nMixed precision support"]
         
-        FSDP --> ZERO["ZeRO Stages<br/>Stage 1: Optimizer states<br/>Stage 2: Gradients<br/>Stage 3: Parameters"]
+        FSDP --> ZERO["ZeRO Stages\nStage 1: Optimizer states\nStage 2: Gradients\nStage 3: Parameters"]
         
-        ZERO --> MEMORY["Memory Optimization<br/>Activation checkpointing<br/>Gradient accumulation<br/>Dynamic batching"]
+        ZERO --> MEMORY["Memory Optimization\nActivation checkpointing\nGradient accumulation\nDynamic batching"]
     end
     
     subgraph "Serving & Deployment"
-        QUANT --> SERVE["High-Throughput Serving<br/>vLLM: PagedAttention<br/>TensorRT-LLM: Optimized kernels<br/>Throughput: 1000+ req/s"]
+        QUANT --> SERVE["High-Throughput Serving\nvLLM: PagedAttention\nTensorRT-LLM: Optimized kernels\nThroughput: 1000+ req/s"]
         
-        SERVE --> SPECULATIVE["Speculative Decoding<br/>Draft model + verification<br/>Medusa, Lookahead<br/>Speed: 2-4x improvement"]
+        SERVE --> SPECULATIVE["Speculative Decoding\nDraft model + verification\nMedusa, Lookahead\nSpeed: 2-4x improvement"]
         
-        SPECULATIVE --> DEPLOY["Production Deployment<br/>ONNX export<br/>TensorRT optimization<br/>Edge deployment"]
+        SPECULATIVE --> DEPLOY["Production Deployment\nONNX export\nTensorRT optimization\nEdge deployment"]
     end
     
     subgraph "Advanced Techniques"
-        MIXED --> FLASH["FlashAttention v2<br/>IO-aware attention<br/>Block-wise computation<br/>Memory: O(N) instead of O(N²)"]
+        MIXED --> FLASH["FlashAttention v2\nIO-aware attention\nBlock-wise computation\nMemory: O(N) instead of O(N²)"]
         
-        FLASH --> SPARSE["Sparse Attention<br/>Local, sliding window<br/>Linear complexity<br/>Long sequence support"]
+        FLASH --> SPARSE["Sparse Attention\nLocal, sliding window\nLinear complexity\nLong sequence support"]
         
-        SPARSE --> PEFT["Parameter-Efficient Finetuning<br/>LoRA: Low-rank adapters<br/>QLoRA: 4-bit + LoRA<br/>Memory: 90%+ reduction"]
+        SPARSE --> PEFT["Parameter-Efficient Finetuning\nLoRA: Low-rank adapters\nQLoRA: 4-bit + LoRA\nMemory: 90%+ reduction"]
     end
     
     subgraph "Performance Metrics"
-        TRAIN_METRICS["Training Metrics<br/>Memory usage reduction<br/>Training speed improvement<br/>Convergence stability"]
+        TRAIN_METRICS["Training Metrics\nMemory usage reduction\nTraining speed improvement\nConvergence stability"]
         
-        INFER_METRICS["Inference Metrics<br/>Latency reduction<br/>Throughput improvement<br/>Memory efficiency"]
+        INFER_METRICS["Inference Metrics\nLatency reduction\nThroughput improvement\nMemory efficiency"]
         
-        QUALITY_METRICS["Quality Metrics<br/>Model accuracy preservation<br/>Zero-shot performance<br/>Task adaptation"]
+        QUALITY_METRICS["Quality Metrics\nModel accuracy preservation\nZero-shot performance\nTask adaptation"]
     end
     
     subgraph "Key Parameters"
@@ -63,10 +63,10 @@ flowchart TD
     end
     
     subgraph "Implementation Tools"
-        PYTORCH["PyTorch Ecosystem<br/>FSDP, torch.compile<br/>AMP, checkpointing<br/>Distributed training"]
+        PYTORCH["PyTorch Ecosystem\nFSDP, torch.compile\nAMP, checkpointing\nDistributed training"]
         
-        EXTERNAL["External Libraries<br/>DeepSpeed ZeRO<br/>vLLM serving<br/>TensorRT-LLM"]
+        EXTERNAL["External Libraries\nDeepSpeed ZeRO\nvLLM serving\nTensorRT-LLM"]
         
-        CUSTOM["Custom Kernels<br/>FlashAttention<br/>PagedAttention<br/>Optimized GEMM"]
+        CUSTOM["Custom Kernels\nFlashAttention\nPagedAttention\nOptimized GEMM"]
     end
 ```

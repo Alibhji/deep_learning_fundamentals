@@ -4,22 +4,22 @@
 flowchart TD
     subgraph "Input Processing"
         TOK["Input Tokens (B, N, vocab_size)"] --> EMB["Token Embedding (B, N, d_model)"]
-        EMB --> PE["+ Positional Encoding<br/>(Sinusoidal/Learned)"]
+        EMB --> PE["+ Positional Encoding\n(Sinusoidal/Learned)"]
     end
     
     subgraph "Multi-Head Attention Block"
-        PE --> WQKV["Linear Projections<br/>W_q, W_k, W_v: (B, N, d_model) → (B, N, d_model)"]
-        WQKV --> SPLIT["Reshape to Heads<br/>(B, N, d_model) → (B, H, N, D_k) → (B, H, N, D_k)"]
-        SPLIT --> ATTN["Scaled Dot-Product Attention<br/>scores = (Q @ K^T) / √D_k<br/>weights = softmax(scores)<br/>output = weights @ V"]
-        ATTN --> CAT["Concat Heads<br/>(B, H, N, D_v) → (B, N, H·D_v)"]
-        CAT --> WO["Output Projection W_o<br/>(B, N, H·D_v) → (B, N, d_model)"]
+        PE --> WQKV["Linear Projections\nW_q, W_k, W_v: (B, N, d_model) → (B, N, d_model)"]
+        WQKV --> SPLIT["Reshape to Heads\n(B, N, d_model) → (B, N, H, D_k) → (B, H, N, D_k)"]
+        SPLIT --> ATTN["Scaled Dot-Product Attention\nscores = (Q @ K^T) / √D_k\nweights = softmax(scores)\noutput = weights @ V"]
+        ATTN --> CAT["Concat Heads\n(B, H, N, D_v) → (B, N, H·D_v)"]
+        CAT --> WO["Output Projection W_o\n(B, N, H·D_v) → (B, N, d_model)"]
         WO --> DROP1["Dropout"]
         DROP1 --> ADD1["+ Residual Connection"]
     end
     
     subgraph "Feed-Forward Network"
         ADD1 --> NORM1["LayerNorm"]
-        NORM1 --> FFN["Position-wise FFN<br/>Linear(d_model, d_ff) → ReLU → Dropout → Linear(d_ff, d_model)"]
+        NORM1 --> FFN["Position-wise FFN\nLinear(d_model, d_ff) → ReLU → Dropout → Linear(d_ff, d_model)"]
         FFN --> DROP2["Dropout"]
         DROP2 --> ADD2["+ Residual Connection"]
     end
