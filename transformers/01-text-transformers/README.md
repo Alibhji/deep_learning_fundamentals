@@ -64,6 +64,68 @@ Where:
 - `d_k`: Dimension of keys/queries
 - `√d_k`: Scaling factor to prevent softmax saturation
 
+#### How Q, K, V are Generated from Inputs
+
+The Q, K, V matrices are **not** the input tokens themselves, but rather **learned linear transformations** of the input embeddings. Here's how they're generated:
+
+**Input**: Token embeddings `X` with shape `(batch_size, sequence_length, d_model)`
+
+**Linear Projections**:
+```python
+# Three separate learnable weight matrices
+W_q = nn.Linear(d_model, d_model)  # Query projection
+W_k = nn.Linear(d_model, d_model)  # Key projection  
+W_v = nn.Linear(d_model, d_model)  # Value projection
+
+# Generate Q, K, V from input embeddings
+Q = W_q(X)  # Shape: (batch_size, sequence_length, d_model)
+K = W_k(X)  # Shape: (batch_size, sequence_length, d_model)
+V = W_v(X)  # Shape: (batch_size, sequence_length, d_model)
+```
+
+**Why Separate Projections?**
+- **Different Roles**: Each projection learns to transform the input into a different "space":
+  - **Q (Query)**: "What am I looking for?" - learns to encode what information the current position needs
+  - **K (Key)**: "What do I contain?" - learns to encode what information each position can provide
+  - **V (Value)**: "What do I offer?" - learns to encode the actual content/information to be retrieved
+- **Learnable Parameters**: The model learns optimal transformations during training
+- **Flexibility**: Different heads can learn different types of relationships
+
+**In Multi-Head Attention**:
+```python
+# For H attention heads, reshape to (batch_size, H, sequence_length, d_k)
+# where d_k = d_model / H
+Q = Q.view(batch_size, sequence_length, num_heads, d_k).transpose(1, 2)
+K = K.view(batch_size, sequence_length, num_heads, d_k).transpose(1, 2)
+V = V.view(batch_size, sequence_length, num_heads, d_k).transpose(1, 2)
+```
+
+**Mathematical Intuition**:
+- **Q @ K^T**: Computes similarity scores between every query and every key
+- **Softmax**: Converts similarities to attention weights (probabilities)
+- **@ V**: Uses attention weights to create a weighted combination of values
+
+**Example with Concrete Shapes**:
+```python
+# Input: (B=2, N=10, d_model=512)
+input_embeddings = torch.randn(2, 10, 512)
+
+# Linear projections
+W_q = nn.Linear(512, 512)  # Learnable query weights
+W_k = nn.Linear(512, 512)  # Learnable key weights
+W_v = nn.Linear(512, 512)  # Learnable value weights
+
+# Generate Q, K, V
+Q = W_q(input_embeddings)  # (2, 10, 512)
+K = W_k(input_embeddings)  # (2, 10, 512)
+V = W_v(input_embeddings)  # (2, 10, 512)
+
+# For 8 heads (d_k = 512/8 = 64)
+Q = Q.view(2, 10, 8, 64).transpose(1, 2)  # (2, 8, 10, 64)
+K = K.view(2, 10, 8, 64).transpose(1, 2)  # (2, 8, 10, 64)
+V = V.view(2, 10, 8, 64).transpose(1, 2)  # (2, 8, 10, 64)
+```
+
 #### Step-by-Step Process
 
 1. **Compute Attention Scores**: `QK^T`
