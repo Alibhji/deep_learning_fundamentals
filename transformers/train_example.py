@@ -23,6 +23,10 @@ from tqdm import tqdm
 
 # Placeholder classes for demonstration
 class MultiHeadAttention(nn.Module):
+    """Tiny wrapper around nn.MultiheadAttention for demo purposes.
+
+    Expects input (T, B, D) as required by nn.MultiheadAttention (non-batch_first).
+    """
     def __init__(self, d_model, num_heads):
         super().__init__()
         self.attention = nn.MultiheadAttention(d_model, num_heads)
@@ -30,6 +34,7 @@ class MultiHeadAttention(nn.Module):
         return self.attention(x, x, x)[0]
 
 class TransformerLayer(nn.Module):
+    """Minimal transformer layer: attention + linear FFN (demo)."""
     def __init__(self, d_model, num_heads, d_ff):
         super().__init__()
         self.attention = MultiHeadAttention(d_model, num_heads)
@@ -38,6 +43,7 @@ class TransformerLayer(nn.Module):
         return self.ff(self.attention(x))
 
 class EncoderOnlyTransformer(nn.Module):
+    """Toy encoder-only model for example training in this script."""
     def __init__(self, vocab_size, d_model, num_heads, num_layers):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
@@ -50,6 +56,7 @@ class EncoderOnlyTransformer(nn.Module):
         return self.output(x)
 
 class VisionTransformer(nn.Module):
+    """Toy ViT-like model (heavily simplified) for example training."""
     def __init__(self, img_size=224, patch_size=16, num_classes=1000, embed_dim=768, depth=6, num_heads=12):
         super().__init__()
         self.patch_embed = nn.Linear(3 * patch_size * patch_size, embed_dim)

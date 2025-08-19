@@ -12,6 +12,13 @@ A concise reference for key transformer concepts, architectures, and implementat
 
 ## 🔑 Core Concepts
 
+### Core notation (at a glance)
+- d_model: model/hidden size (width of token vectors)
+- H: number of attention heads
+- N: sequence length (tokens/patches)
+- D_k, D_v: per-head dimensions; typically d_model = H × D_k and D_k = D_v
+- Shapes: embeddings (B, N, d_model), Q/K/V (B, H, N, D_k/D_v)
+
 ### Attention Mechanism
 ```
 Attention(Q, K, V) = softmax(QK^T / √d_k)V

@@ -14,7 +14,12 @@ from attention_mechanism import MultiHeadAttention, SinusoidalPositionalEncoding
 
 
 class EncoderOnlyTransformer(nn.Module):
-    """Encoder-only transformer (BERT-style) for understanding tasks"""
+    """Encoder-only transformer (BERT-style) for understanding tasks.
+
+    Input/Output shapes:
+      - input_ids: (B, N)
+      - returns: (B, N, D_model)
+    """
     
     def __init__(self, vocab_size, d_model=768, num_heads=12, num_layers=12, 
                  d_ff=3072, max_seq_len=512, dropout=0.1):
@@ -56,7 +61,12 @@ class EncoderOnlyTransformer(nn.Module):
 
 
 class DecoderOnlyTransformer(nn.Module):
-    """Decoder-only transformer (GPT-style) for generation tasks"""
+    """Decoder-only transformer (GPT-style) for generation tasks.
+
+    Input/Output shapes:
+      - input_ids: (B, N)
+      - returns logits: (B, N, vocab_size)
+    """
     
     def __init__(self, vocab_size, d_model=768, num_heads=12, num_layers=12,
                  d_ff=3072, max_seq_len=512, dropout=0.1):
@@ -100,7 +110,13 @@ class DecoderOnlyTransformer(nn.Module):
 
 
 class EncoderDecoderTransformer(nn.Module):
-    """Encoder-decoder transformer (T5-style) for sequence-to-sequence tasks"""
+    """Encoder-decoder transformer (T5-style) for sequence-to-sequence tasks.
+
+    Shapes:
+      - input_ids: (B, N_src)
+      - decoder_input_ids: (B, N_tgt)
+      - returns logits: (B, N_tgt, vocab_size)
+    """
     
     def __init__(self, vocab_size, d_model=768, num_heads=12, num_layers=6,
                  d_ff=3072, max_seq_len=512, dropout=0.1):
@@ -130,7 +146,7 @@ class EncoderDecoderTransformer(nn.Module):
         self.output_projection = nn.Linear(d_model, vocab_size)
         
     def encode(self, input_ids, attention_mask=None):
-        """Encode the input sequence"""
+        """Encode the input sequence -> (B, N_src, D_model)"""
         x = self.token_embedding(input_ids)
         x = self.positional_encoding(x)
         x = self.dropout(x)
@@ -142,7 +158,7 @@ class EncoderDecoderTransformer(nn.Module):
     
     def decode(self, decoder_input_ids, encoder_outputs, attention_mask=None, 
                decoder_attention_mask=None):
-        """Decode the sequence using encoder outputs"""
+        """Decode the sequence using encoder outputs -> (B, N_tgt, vocab_size)"""
         x = self.token_embedding(decoder_input_ids)
         x = self.positional_encoding(x)
         x = self.dropout(x)

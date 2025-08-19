@@ -17,39 +17,45 @@ import math
 
 def scaled_dot_product_attention(Q, K, V, mask=None):
     """
-    Compute scaled dot-product attention
-    
+    Compute scaled dot-product attention.
+
     Args:
-        Q: Query tensor (batch_size, seq_len, d_k)
-        K: Key tensor (batch_size, seq_len, d_k)
-        V: Value tensor (batch_size, seq_len, d_v)
-        mask: Optional mask tensor
-    
+        Q: Query tensor with shape (B, H, N_q, D_k)
+        K: Key tensor with shape   (B, H, N_k, D_k)
+        V: Value tensor with shape (B, H, N_k, D_v)
+        mask: Optional mask tensor broadcastable to (B, H, N_q, N_k)
+
     Returns:
-        Attention output and attention weights
+        (output, attention_weights):
+          - output: (B, H, N_q, D_v)
+          - attention_weights: (B, H, N_q, N_k)
     """
-    # Compute attention scores
+    # Attention scores: (B, H, N_q, D_k) x (B, H, D_k, N_k) -> (B, H, N_q, N_k)
     scores = torch.matmul(Q, K.transpose(-2, -1))
-    
-    # Scale
+
+    # Scale by sqrt(D_k) for stable gradients
     d_k = Q.size(-1)
     scores = scores / math.sqrt(d_k)
-    
-    # Apply mask if provided
+
+    # Apply mask if provided (masked positions -> large negative)
     if mask is not None:
         scores = scores.masked_fill(mask == 0, -1e9)
-    
-    # Apply softmax
+
+    # Normalize into attention weights
     attention_weights = F.softmax(scores, dim=-1)
-    
-    # Apply to values
+
+    # Weighted sum of values -> (B, H, N_q, D_v)
     output = torch.matmul(attention_weights, V)
-    
+
     return output, attention_weights
 
 
 class MultiHeadAttention(nn.Module):
-    """Multi-Head Attention mechanism"""
+    """Multi-Head Attention mechanism.
+
+    Inputs use (B, N, D_model) and are internally reshaped to (B, H, N, D_k)
+    before applying attention.
+    """
     
     def __init__(self, d_model, num_heads, dropout=0.1):
         super().__init__()
@@ -70,7 +76,7 @@ class MultiHeadAttention(nn.Module):
     def forward(self, Q, K, V, mask=None):
         batch_size = Q.size(0)
         
-        # Linear projections and reshape
+        # Linear projections and reshape to (B, H, N, D_k)
         Q = self.W_q(Q).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
         K = self.W_k(K).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
         V = self.W_v(V).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)

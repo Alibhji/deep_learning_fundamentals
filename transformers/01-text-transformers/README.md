@@ -2,6 +2,15 @@
 
 This module covers the fundamental concepts of transformers, starting with the attention mechanism and progressing through different architectural patterns for text processing.
 
+### Core notation used in this module
+
+- **d_model**: hidden size/model width used across embeddings, attention, FFN
+- **H (num_heads)**: number of attention heads
+- **N (sequence length)**: number of tokens per sequence
+- **D_k, D_v**: per-head dimensions for queries/keys and values
+- Relation: `d_model = H × D_k` and typically `D_k = D_v`
+- Common shapes: embeddings `(B, N, d_model)`, Q/K/V `(B, H, N, D_k/D_v)`
+
 ## 🎯 Learning Objectives
 
 - Understand the attention mechanism and why it revolutionized NLP
