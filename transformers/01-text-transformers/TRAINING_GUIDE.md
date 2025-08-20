@@ -348,48 +348,129 @@ class TransformerClassifier(nn.Module):
         self._init_weights()
     
     def _init_weights(self):
-        """Initialize model weights."""
+        """
+        Initialize model weights using proper initialization strategies.
+        
+        Weight initialization is crucial for training stability and convergence.
+        Different layers require different initialization strategies:
+        
+        - Linear layers: Xavier/Glorot uniform initialization for balanced gradients
+        - Embedding layers: Small normal distribution to prevent large initial values
+        - Bias terms: Zero initialization to start from neutral position
+        
+        This initialization helps with:
+        1. Gradient flow during backpropagation
+        2. Preventing vanishing/exploding gradients
+        3. Faster convergence during training
+        """
         for module in self.modules():
             if isinstance(module, nn.Linear):
+                # Xavier/Glorot uniform initialization for linear layers
+                # This initialization maintains variance across layers
+                # Formula: std = sqrt(2 / (fan_in + fan_out))
                 nn.init.xavier_uniform_(module.weight)
+                
+                # Initialize bias to zero for neutral starting point
                 if module.bias is not None:
                     nn.init.zeros_(module.bias)
+                    
             elif isinstance(module, nn.Embedding):
+                # Normal distribution for embedding weights
+                # Small standard deviation (0.02) prevents large initial values
+                # This helps with training stability
                 nn.init.normal_(module.weight, mean=0, std=0.02)
     
     def forward(self, input_ids, attention_mask=None):
         """
-        Forward pass through the model.
+        Forward pass through the transformer classifier.
+        
+        This method processes input token IDs through the complete model pipeline:
+        1. Token Embedding: Convert token IDs to dense vectors
+        2. Positional Encoding: Add sequence position information
+        3. Transformer Processing: Apply self-attention and feed-forward layers
+        4. Sequence Pooling: Aggregate sequence information into fixed-size representation
+        5. Classification: Generate final class predictions
+        
+        Mathematical Flow:
+        - Input: (batch_size, seq_len) token IDs
+        - Embeddings: (batch_size, seq_len, d_model) dense vectors
+        - Transformer: (batch_size, seq_len, d_model) contextual representations
+        - Pooling: (batch_size, d_model) sequence summary
+        - Output: (batch_size, num_classes) class logits
         
         Args:
-            input_ids (torch.Tensor): Input token IDs (B, N)
-            attention_mask (torch.Tensor): Attention mask (B, N)
+            input_ids (torch.Tensor): Input token IDs with shape (batch_size, seq_len)
+            attention_mask (torch.Tensor, optional): Attention mask with shape (batch_size, seq_len)
+                                                   1 = attend to this position, 0 = ignore
         
         Returns:
-            logits (torch.Tensor): Classification logits (B, num_classes)
+            logits (torch.Tensor): Raw classification scores with shape (batch_size, num_classes)
+                                 Higher values indicate higher probability for that class
+        
+        Example:
+            >>> input_ids = torch.randint(0, 30522, (16, 128))  # 16 samples, 128 tokens each
+            >>> attention_mask = torch.ones(16, 128)  # Attend to all positions
+            >>> logits = model(input_ids, attention_mask)  # Shape: (16, 3)
         """
-        # Embedding + positional encoding
-        x = self.embedding(input_ids) * math.sqrt(self.d_model)
+        # Step 1: Token Embedding
+        # Convert integer token IDs to dense vector representations
+        # Shape: (batch_size, seq_len) → (batch_size, seq_len, d_model)
+        x = self.embedding(input_ids)
+        
+        # Scale embeddings by sqrt(d_model) to prevent large values
+        # This scaling helps maintain variance across the network
+        # Formula from "Attention Is All You Need" paper
+        x = x * math.sqrt(self.d_model)
+        
+        # Step 2: Positional Encoding
+        # Add information about token positions in the sequence
+        # This allows the model to understand word order and relationships
+        # Shape: (batch_size, seq_len, d_model) + (seq_len, d_model) → (batch_size, seq_len, d_model)
         x = self.pos_encoding(x)
         
-        # Create attention mask for transformer
+        # Step 3: Prepare Attention Mask for Transformer
+        # The transformer needs to know which positions to attend to
+        # PyTorch transformer expects: True = ignore, False = attend
         if attention_mask is not None:
-            # Convert to transformer format: True = attend, False = ignore
+            # Convert our mask (1=attend, 0=ignore) to transformer format (True=ignore, False=attend)
             src_key_padding_mask = (attention_mask == 0)
         else:
+            # If no mask provided, attend to all positions
             src_key_padding_mask = None
         
-        # Pass through transformer
+        # Step 4: Transformer Encoder Processing
+        # Pass through all transformer layers (self-attention + feed-forward)
+        # Each layer processes the sequence and captures contextual relationships
+        # Shape: (batch_size, seq_len, d_model) → (batch_size, seq_len, d_model)
         x = self.transformer(x, src_key_padding_mask=src_key_padding_mask)
         
-        # Global average pooling over sequence dimension
+        # Step 5: Sequence Pooling (Aggregation)
+        # Convert variable-length sequence to fixed-size representation
+        # We need to aggregate information from all positions into a single vector
+        
         if attention_mask is not None:
-            # Masked average pooling
-            x = (x * attention_mask.unsqueeze(-1)).sum(dim=1) / attention_mask.sum(dim=1, keepdim=True)
+            # Masked Average Pooling: Only average over attended positions
+            # This handles variable-length sequences properly
+            
+            # Expand mask to match tensor dimensions: (batch_size, seq_len) → (batch_size, seq_len, 1)
+            mask_expanded = attention_mask.unsqueeze(-1)
+            
+            # Apply mask and sum: (batch_size, seq_len, d_model) * (batch_size, seq_len, 1)
+            masked_sum = (x * mask_expanded).sum(dim=1)  # Sum over sequence dimension
+            
+            # Normalize by number of attended positions
+            mask_sum = attention_mask.sum(dim=1, keepdim=True)  # Count attended positions per batch
+            x = masked_sum / mask_sum  # Shape: (batch_size, d_model)
+            
         else:
+            # Simple average pooling: average over all positions
+            # Shape: (batch_size, seq_len, d_model) → (batch_size, d_model)
             x = x.mean(dim=1)
         
-        # Classification
+        # Step 6: Classification
+        # Pass the sequence representation through the classification head
+        # This produces raw logits (unscaled probabilities) for each class
+        # Shape: (batch_size, d_model) → (batch_size, num_classes)
         logits = self.classifier(x)
         
         return logits
@@ -407,34 +488,167 @@ from typing import Optional
 
 @dataclass
 class TrainingConfig:
-    """Configuration for training."""
-    # Model parameters
-    vocab_size: int = 30522  # BERT vocab size
+    """
+    Comprehensive configuration class for transformer training.
+    
+    This dataclass centralizes all training hyperparameters and settings,
+    making it easy to experiment with different configurations and
+    ensure reproducibility across training runs.
+    
+    The configuration is organized into logical groups:
+    - Model Architecture: Transformer structure parameters
+    - Training Process: Learning rates, epochs, batch sizes
+    - Optimization: Regularization and optimization settings
+    - Data Handling: Sequence lengths and data splits
+    - Monitoring: Logging and evaluation intervals
+    
+    Usage:
+        >>> config = TrainingConfig(
+        ...     d_model=768,           # Larger model
+        ...     num_layers=12,        # More layers
+        ...     learning_rate=5e-5,   # Lower learning rate
+        ...     batch_size=16         # Smaller batch size
+        ... )
+        >>> trainer = TransformerTrainer(model, train_loader, val_loader, config)
+    
+    Note: All parameters have sensible defaults based on transformer best practices.
+    """
+    
+    # ===== MODEL ARCHITECTURE PARAMETERS =====
+    # These control the structure and capacity of the transformer model
+    
+    vocab_size: int = 30522
+    """Vocabulary size - number of unique tokens the model can process.
+    Default: 30522 (BERT base vocabulary size)
+    Larger vocab = more token types, but requires more memory."""
+    
     d_model: int = 512
+    """Model dimension - hidden size of embeddings and transformer layers.
+    Default: 512 (standard transformer size)
+    This is the core dimension that affects model capacity and performance.
+    Common values: 256 (small), 512 (medium), 768 (large), 1024 (xlarge)"""
+    
     nhead: int = 8
+    """Number of attention heads in multi-head attention.
+    Default: 8 (standard for d_model=512)
+    Must divide d_model evenly: d_model % nhead == 0
+    More heads = more parallel attention patterns, but requires more computation."""
+    
     num_layers: int = 6
+    """Number of transformer encoder layers.
+    Default: 6 (standard transformer size)
+    More layers = deeper model = more complex patterns, but risk of overfitting.
+    Common values: 4 (shallow), 6 (standard), 12 (deep), 24 (very deep)"""
+    
     num_classes: int = 3
+    """Number of output classes for classification.
+    Default: 3 (e.g., positive, negative, neutral for sentiment)
+    Must match your dataset's label cardinality."""
     
-    # Training parameters
+    # ===== TRAINING PROCESS PARAMETERS =====
+    # These control how the model learns during training
+    
     batch_size: int = 32
+    """Number of samples processed together in each training step.
+    Default: 32 (good balance of memory usage and training stability)
+    Larger batches = more stable gradients, but require more memory.
+    Smaller batches = more noisy gradients, but use less memory.
+    Rule of thumb: Use largest batch size that fits in GPU memory."""
+    
     learning_rate: float = 1e-4
+    """Initial learning rate for the optimizer.
+    Default: 1e-4 (0.0001) - standard for transformer fine-tuning
+    Learning rate is crucial for training success:
+    - Too high: training may diverge or oscillate
+    - Too low: training may be very slow
+    - Just right: stable convergence to good performance
+    Common values: 1e-5 (very conservative), 1e-4 (standard), 5e-4 (aggressive)"""
+    
     num_epochs: int = 10
+    """Total number of training epochs.
+    Default: 10 (reasonable starting point)
+    An epoch = one complete pass through all training data.
+    More epochs = more training time, but may lead to overfitting.
+    Use early stopping or validation performance to determine optimal epochs."""
+    
     warmup_steps: int = 1000
+    """Number of steps to gradually increase learning rate.
+    Default: 1000 (standard for transformer training)
+    Warmup is crucial for transformer stability:
+    - Start with very low LR (close to 0)
+    - Gradually increase to target LR over warmup_steps
+    - Then decay LR over remaining training steps
+    Rule of thumb: warmup_steps = 10% of total training steps"""
+    
     max_grad_norm: float = 1.0
+    """Maximum gradient norm for gradient clipping.
+    Default: 1.0 (standard for transformer training)
+    Gradient clipping prevents exploding gradients:
+    - If ||gradient|| > max_grad_norm, scale gradient down
+    - This stabilizes training, especially for deep models
+    Common values: 0.5 (conservative), 1.0 (standard), 2.0 (aggressive)"""
     
-    # Optimization
+    # ===== OPTIMIZATION PARAMETERS =====
+    # These control regularization and optimization behavior
+    
     weight_decay: float = 0.01
+    """L2 regularization strength for weight decay.
+    Default: 0.01 (1%) - standard for transformer training
+    Weight decay helps prevent overfitting by penalizing large weights.
+    Higher values = stronger regularization, but may hurt performance.
+    Common values: 0.001 (weak), 0.01 (standard), 0.1 (strong)"""
+    
     dropout: float = 0.1
+    """Dropout rate for regularization.
+    Default: 0.1 (10%) - standard for transformer training
+    Dropout randomly zeros some neurons during training:
+    - Prevents overfitting by reducing co-adaptation
+    - Forces model to be robust to missing information
+    - Disabled during evaluation (model.eval())
+    Common values: 0.0 (no dropout), 0.1 (standard), 0.2 (strong)"""
     
-    # Data parameters
+    # ===== DATA HANDLING PARAMETERS =====
+    # These control how data is processed and split
+    
     max_length: int = 512
-    train_split: float = 0.8
-    val_split: float = 0.1
+    """Maximum sequence length for input texts.
+    Default: 512 (standard transformer length)
+    Longer sequences = more context, but require more memory and computation.
+    Shorter sequences = faster training, but may lose important context.
+    Must match your tokenizer's maximum length."""
     
-    # Logging
+    train_split: float = 0.8
+    """Fraction of data to use for training.
+    Default: 0.8 (80% of data for training)
+    Remaining 20% is split between validation and test.
+    Typical splits: 70/15/15, 80/10/10, 90/5/5 (train/val/test)"""
+    
+    val_split: float = 0.1
+    """Fraction of data to use for validation.
+    Default: 0.1 (10% of data for validation)
+    Validation data is used to monitor training progress and prevent overfitting.
+    Should be large enough to give reliable performance estimates."""
+    
+    # ===== MONITORING PARAMETERS =====
+    # These control logging and evaluation frequency
+    
     log_interval: int = 100
+    """How often to log training metrics (in batches).
+    Default: 100 (log every 100 batches)
+    More frequent logging = better monitoring, but slower training.
+    Less frequent logging = faster training, but less visibility."""
+    
     eval_interval: int = 500
+    """How often to run validation (in batches).
+    Default: 500 (validate every 500 batches)
+    More frequent validation = better overfitting detection, but slower training.
+    Less frequent validation = faster training, but may miss overfitting."""
+    
     save_interval: int = 1000
+    """How often to save model checkpoints (in batches).
+    Default: 1000 (save every 1000 batches)
+    More frequent saving = better recovery from failures, but uses more disk space.
+    Less frequent saving = less disk usage, but may lose progress on failures."""
 ```
 
 ### **Training Loop**
@@ -448,158 +662,418 @@ import wandb
 
 class TransformerTrainer:
     """
-    Trainer class for transformer models.
+    Comprehensive trainer class for transformer models with advanced training features.
+    
+    This trainer handles the complete training pipeline including:
+    - Model optimization with AdamW optimizer
+    - Learning rate scheduling with warmup
+    - Training and validation loops
+    - Progress tracking and logging
+    - Model checkpointing
+    - Performance monitoring
+    
+    The trainer implements best practices for transformer training:
+    1. Gradient clipping to prevent exploding gradients
+    2. Learning rate warmup for stable early training
+    3. Proper device management (GPU/CPU)
+    4. Comprehensive logging and monitoring
+    5. Automatic model saving for best performance
+    
+    Args:
+        model: The transformer model to train
+        train_dataloader: DataLoader for training data
+        val_dataloader: DataLoader for validation data
+        config: Training configuration object
+    
+    Example:
+        >>> trainer = TransformerTrainer(model, train_loader, val_loader, config)
+        >>> trainer.train()  # Start training
     """
     def __init__(self, model, train_dataloader, val_dataloader, config):
+        # Store references to model and data
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.config = config
         
-        # Setup optimizer and scheduler
+        # Step 1: Setup Optimizer (AdamW)
+        # AdamW is an improved version of Adam with better weight decay
+        # It's the standard choice for transformer training
         self.optimizer = AdamW(
-            model.parameters(),
-            lr=config.learning_rate,
-            weight_decay=config.weight_decay
+            model.parameters(),           # All trainable parameters
+            lr=config.learning_rate,     # Initial learning rate
+            weight_decay=config.weight_decay  # L2 regularization strength
         )
         
+        # Step 2: Setup Learning Rate Scheduler
+        # Linear warmup followed by linear decay
+        # This is crucial for transformer training stability
+        
+        # Calculate total training steps for scheduler
         total_steps = len(train_dataloader) * config.num_epochs
+        
+        # Create scheduler with warmup
         self.scheduler = get_linear_schedule_with_warmup(
-            self.optimizer,
-            num_warmup_steps=config.warmup_steps,
-            num_training_steps=total_steps
+            self.optimizer,                    # The optimizer to schedule
+            num_warmup_steps=config.warmup_steps,  # Steps to gradually increase LR
+            num_training_steps=total_steps         # Total steps for LR decay
         )
         
-        # Loss function
+        # Step 3: Setup Loss Function
+        # CrossEntropyLoss is standard for classification tasks
+        # It combines softmax + negative log likelihood
+        # No need to apply softmax manually - the loss function handles it
         self.criterion = nn.CrossEntropyLoss()
         
-        # Device
+        # Step 4: Device Management
+        # Automatically detect and use GPU if available
+        # This significantly speeds up training
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Using device: {self.device}")
+        
+        # Move model to the appropriate device
         self.model.to(self.device)
         
-        # Initialize wandb
+        # Step 5: Initialize Experiment Tracking
+        # Weights & Biases (wandb) for experiment tracking
+        # This helps monitor training progress and compare experiments
         wandb.init(project="transformer-training", config=vars(config))
     
     def train_epoch(self, epoch):
-        """Train for one epoch."""
-        self.model.train()
-        total_loss = 0
-        correct = 0
-        total = 0
+        """
+        Train the model for one complete epoch.
         
+        An epoch consists of processing all training samples once. This method:
+        1. Sets the model to training mode (enables dropout, batch norm updates)
+        2. Iterates through all training batches
+        3. Performs forward pass, loss calculation, and backward pass
+        4. Updates model weights using the optimizer
+        5. Tracks training metrics and logs progress
+        
+        Training Process for Each Batch:
+        - Forward Pass: Input → Model → Predictions
+        - Loss Calculation: Compare predictions with true labels
+        - Backward Pass: Compute gradients for all parameters
+        - Gradient Clipping: Prevent exploding gradients
+        - Weight Update: Apply gradients to model parameters
+        - Learning Rate Update: Adjust learning rate according to schedule
+        
+        Args:
+            epoch (int): Current epoch number (0-indexed)
+        
+        Returns:
+            tuple: (average_loss, accuracy_percentage) for the epoch
+        
+        Example:
+            >>> avg_loss, accuracy = trainer.train_epoch(0)
+            >>> print(f"Epoch 0: Loss={avg_loss:.4f}, Accuracy={accuracy:.2f}%")
+        """
+        # Step 1: Set Model to Training Mode
+        # This enables:
+        # - Dropout layers (randomly zero some neurons)
+        # - Batch normalization updates (track running statistics)
+        # - Gradient computation (required for backpropagation)
+        self.model.train()
+        
+        # Step 2: Initialize Epoch Statistics
+        total_loss = 0          # Accumulate loss across all batches
+        correct = 0             # Count correct predictions
+        total = 0               # Count total predictions
+        
+        # Step 3: Create Progress Bar
+        # Shows real-time training progress with current metrics
         progress_bar = tqdm(self.train_dataloader, desc=f'Epoch {epoch}')
         
+        # Step 4: Iterate Through Training Batches
         for batch_idx, batch in enumerate(progress_bar):
-            # Move to device
-            input_ids = batch['input_ids'].to(self.device)
-            attention_mask = batch['attention_mask'].to(self.device)
-            labels = batch['labels'].to(self.device)
+            # Step 4a: Move Data to Device
+            # Transfer tensors to GPU/CPU for processing
+            # This is crucial for performance - GPU operations are much faster
+            input_ids = batch['input_ids'].to(self.device)           # Token IDs
+            attention_mask = batch['attention_mask'].to(self.device) # Attention mask
+            labels = batch['labels'].to(self.device)                 # True labels
             
-            # Forward pass
+            # Step 4b: Forward Pass
+            # Clear previous gradients before computing new ones
+            # This prevents gradient accumulation across batches
             self.optimizer.zero_grad()
+            
+            # Pass data through the model to get predictions
+            # Shape: (batch_size, num_classes) - raw logits for each class
             logits = self.model(input_ids, attention_mask)
+            
+            # Calculate loss between predictions and true labels
+            # CrossEntropyLoss automatically applies softmax and computes NLL
             loss = self.criterion(logits, labels)
             
-            # Backward pass
+            # Step 4c: Backward Pass
+            # Compute gradients for all model parameters
+            # This is the core of backpropagation
             loss.backward()
             
-            # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.max_grad_norm)
+            # Step 4d: Gradient Clipping
+            # Prevent exploding gradients by limiting gradient magnitude
+            # This is especially important for transformers (RNNs too)
+            # Formula: if ||g|| > threshold, then g = g * threshold / ||g||
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(),     # All model parameters
+                self.config.max_grad_norm    # Maximum gradient norm (e.g., 1.0)
+            )
             
-            # Update weights
+            # Step 4e: Update Model Weights
+            # Apply computed gradients to update model parameters
+            # This is where the model actually learns
             self.optimizer.step()
+            
+            # Step 4f: Update Learning Rate
+            # Adjust learning rate according to the schedule
+            # Warmup: gradually increase LR, then decay
             self.scheduler.step()
             
-            # Statistics
+            # Step 4g: Update Training Statistics
+            # Accumulate loss for epoch average
             total_loss += loss.item()
-            _, predicted = torch.max(logits, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
             
-            # Update progress bar
+            # Calculate accuracy for this batch
+            # Get predicted class (highest logit value)
+            _, predicted = torch.max(logits, 1)  # dim=1: max over classes
+            total += labels.size(0)              # Add batch size to total
+            correct += (predicted == labels).sum().item()  # Count correct predictions
+            
+            # Step 4h: Update Progress Bar
+            # Show real-time metrics: current loss and cumulative accuracy
             progress_bar.set_postfix({
-                'Loss': f'{loss.item():.4f}',
-                'Acc': f'{100 * correct / total:.2f}%'
+                'Loss': f'{loss.item():.4f}',                    # Current batch loss
+                'Acc': f'{100 * correct / total:.2f}%'           # Cumulative accuracy
             })
             
-            # Log to wandb
+            # Step 4i: Log Metrics to WandB
+            # Log training metrics at specified intervals
+            # This enables experiment tracking and visualization
             if batch_idx % self.config.log_interval == 0:
                 wandb.log({
-                    'train_loss': loss.item(),
-                    'train_accuracy': 100 * correct / total,
-                    'learning_rate': self.scheduler.get_last_lr()[0],
-                    'epoch': epoch,
-                    'step': epoch * len(self.train_dataloader) + batch_idx
+                    'train_loss': loss.item(),                    # Current batch loss
+                    'train_accuracy': 100 * correct / total,      # Cumulative accuracy
+                    'learning_rate': self.scheduler.get_last_lr()[0],  # Current LR
+                    'epoch': epoch,                               # Current epoch
+                    'step': epoch * len(self.train_dataloader) + batch_idx  # Global step
                 })
         
-        return total_loss / len(self.train_dataloader), 100 * correct / total
+        # Step 5: Calculate Epoch Results
+        # Return average loss and final accuracy for the epoch
+        avg_loss = total_loss / len(self.train_dataloader)
+        accuracy = 100 * correct / total
+        
+        return avg_loss, accuracy
     
     def validate(self, epoch):
-        """Validate the model."""
-        self.model.eval()
-        total_loss = 0
-        correct = 0
-        total = 0
+        """
+        Validate the model on the validation dataset.
         
+        Validation is crucial for:
+        1. Monitoring model performance on unseen data
+        2. Detecting overfitting (training accuracy >> validation accuracy)
+        3. Selecting the best model checkpoint
+        4. Early stopping decisions
+        
+        Key Differences from Training:
+        - Model is in evaluation mode (no dropout, no gradient computation)
+        - No weight updates (gradients are not computed)
+        - No learning rate updates
+        - Metrics are logged but not used for optimization
+        
+        Args:
+            epoch (int): Current epoch number for logging purposes
+        
+        Returns:
+            tuple: (average_validation_loss, validation_accuracy_percentage)
+        
+        Example:
+            >>> val_loss, val_acc = trainer.validate(0)
+            >>> print(f"Validation: Loss={val_loss:.4f}, Accuracy={val_acc:.2f}%")
+        """
+        # Step 1: Set Model to Evaluation Mode
+        # This disables:
+        # - Dropout layers (use full network capacity)
+        # - Batch normalization updates (use running statistics)
+        # - Gradient computation (save memory and computation)
+        self.model.eval()
+        
+        # Step 2: Initialize Validation Statistics
+        total_loss = 0          # Accumulate validation loss
+        correct = 0             # Count correct predictions
+        total = 0               # Count total predictions
+        
+        # Step 3: Disable Gradient Computation
+        # This saves memory and computation since we don't need gradients for validation
+        # torch.no_grad() is a context manager that disables gradient tracking
         with torch.no_grad():
+            # Step 4: Iterate Through Validation Batches
             for batch in self.val_dataloader:
-                # Move to device
-                input_ids = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
-                labels = batch['labels'].to(self.device)
+                # Step 4a: Move Data to Device
+                # Same as training - transfer tensors to GPU/CPU
+                input_ids = batch['input_ids'].to(self.device)           # Token IDs
+                attention_mask = batch['attention_mask'].to(self.device) # Attention mask
+                labels = batch['labels'].to(self.device)                 # True labels
                 
-                # Forward pass
+                # Step 4b: Forward Pass (No Backward Pass)
+                # Pass data through the model to get predictions
+                # No need to compute gradients - just get predictions
                 logits = self.model(input_ids, attention_mask)
+                
+                # Calculate loss for monitoring (not for optimization)
+                # This helps track validation performance over time
                 loss = self.criterion(logits, labels)
                 
-                # Statistics
+                # Step 4c: Update Validation Statistics
+                # Accumulate loss for epoch average
                 total_loss += loss.item()
-                _, predicted = torch.max(logits, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                
+                # Calculate accuracy for this batch
+                # Get predicted class (highest logit value)
+                _, predicted = torch.max(logits, 1)  # dim=1: max over classes
+                total += labels.size(0)              # Add batch size to total
+                correct += (predicted == labels).sum().item()  # Count correct predictions
         
+        # Step 5: Calculate Final Validation Metrics
+        # Compute average loss and accuracy across all validation batches
         avg_loss = total_loss / len(self.val_dataloader)
         accuracy = 100 * correct / total
         
-        # Log to wandb
+        # Step 6: Log Validation Metrics to WandB
+        # Track validation performance over time
+        # This helps identify overfitting and model convergence
         wandb.log({
-            'val_loss': avg_loss,
-            'val_accuracy': accuracy,
-            'epoch': epoch
+            'val_loss': avg_loss,        # Average validation loss for the epoch
+            'val_accuracy': accuracy,    # Validation accuracy for the epoch
+            'epoch': epoch               # Current epoch number
         })
         
         return avg_loss, accuracy
     
     def train(self):
-        """Complete training loop."""
+        """
+        Execute the complete training loop for all epochs.
+        
+        This is the main training method that orchestrates the entire training process:
+        1. Iterates through all epochs
+        2. Calls train_epoch() for each epoch
+        3. Calls validate() after each training epoch
+        4. Saves the best model based on validation performance
+        5. Tracks and reports training progress
+        
+        Training Loop Structure:
+        For each epoch:
+        - Train the model on all training data
+        - Validate the model on validation data
+        - Compare validation performance with best so far
+        - Save model if it's the best performer
+        - Log metrics and progress
+        
+        Model Checkpointing:
+        - Saves the best model based on validation accuracy
+        - Includes model weights, optimizer state, and configuration
+        - Enables training resumption and model deployment
+        
+        Args:
+            None (uses instance variables set in __init__)
+        
+        Returns:
+            None (saves best model to disk)
+        
+        Example:
+            >>> trainer = TransformerTrainer(model, train_loader, val_loader, config)
+            >>> trainer.train()  # Start complete training process
+        """
+        # Step 1: Initialize Best Performance Tracking
+        # Track the best validation accuracy seen so far
+        # This is used to determine when to save model checkpoints
         best_val_acc = 0
         
+        # Step 2: Main Training Loop
+        # Iterate through all epochs specified in the configuration
         for epoch in range(self.config.num_epochs):
-            # Train
+            print(f"\n{'='*60}")
+            print(f"Starting Epoch {epoch + 1}/{self.config.num_epochs}")
+            print(f"{'='*60}")
+            
+            # Step 2a: Training Phase
+            # Train the model on all training data for this epoch
+            # This updates model weights based on training loss
+            print(f"Training phase...")
             train_loss, train_acc = self.train_epoch(epoch)
             
-            # Validate
+            # Step 2b: Validation Phase
+            # Evaluate the model on validation data
+            # This helps monitor performance on unseen data
+            print(f"Validation phase...")
             val_loss, val_acc = self.validate(epoch)
             
-            print(f'Epoch {epoch}:')
-            print(f'  Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%')
-            print(f'  Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%')
+            # Step 2c: Epoch Summary
+            # Print comprehensive results for this epoch
+            print(f'\n📊 Epoch {epoch + 1} Results:')
+            print(f'  🚂 Training:   Loss: {train_loss:.4f}, Accuracy: {train_acc:.2f}%')
+            print(f'  ✅ Validation: Loss: {val_loss:.4f}, Accuracy: {val_acc:.2f}%')
             
-            # Save best model
+            # Step 2d: Model Checkpointing
+            # Save the model if it achieves the best validation accuracy so far
+            # This implements a simple form of model selection
             if val_acc > best_val_acc:
+                # Update best accuracy record
                 best_val_acc = val_acc
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': self.model.state_dict(),
-                    'optimizer_state_dict': self.optimizer.state_dict(),
-                    'val_accuracy': val_acc,
-                    'config': self.config
-                }, 'best_model.pth')
-                print(f'  New best model saved with validation accuracy: {val_acc:.2f}%')
+                
+                # Create comprehensive checkpoint
+                checkpoint = {
+                    'epoch': epoch,                                    # Current epoch
+                    'model_state_dict': self.model.state_dict(),       # Model weights
+                    'optimizer_state_dict': self.optimizer.state_dict(), # Optimizer state
+                    'val_accuracy': val_acc,                           # Best validation accuracy
+                    'config': self.config,                             # Training configuration
+                    'training_stats': {                                # Additional metadata
+                        'train_loss': train_loss,
+                        'train_accuracy': train_acc,
+                        'val_loss': val_loss,
+                        'best_val_accuracy': best_val_acc
+                    }
+                }
+                
+                # Save checkpoint to disk
+                torch.save(checkpoint, 'best_model.pth')
+                
+                print(f'  🎯 New best model saved!')
+                print(f'     Validation accuracy: {val_acc:.2f}%')
+                print(f'     Previous best: {best_val_acc:.2f}%')
+                print(f'     Checkpoint: best_model.pth')
+                
+                # Log to wandb for experiment tracking
+                wandb.log({
+                    'best_val_accuracy': best_val_acc,
+                    'epoch_best_achieved': epoch
+                })
+            else:
+                print(f'  📈 No improvement (Best: {best_val_acc:.2f}%)')
             
+            # Step 2e: Progress Summary
+            # Show overall training progress
+            progress = (epoch + 1) / self.config.num_epochs * 100
+            print(f'  📈 Overall Progress: {progress:.1f}% ({epoch + 1}/{self.config.num_epochs})')
             print()
         
+        # Step 3: Training Completion
+        print(f"{'='*60}")
+        print(f"🎉 Training Completed Successfully!")
+        print(f"{'='*60}")
+        print(f"📊 Final Results:")
+        print(f"  🏆 Best validation accuracy: {best_val_acc:.2f}%")
+        print(f"  💾 Best model saved as: best_model.pth")
+        print(f"  📁 Checkpoint includes: model weights, optimizer state, config")
+        print(f"  🔄 To resume training: load checkpoint and continue")
+        
+        # Step 4: Cleanup
+        # Finalize wandb experiment tracking
         wandb.finish()
+        
+        print(f"\n✅ Training pipeline completed. Model ready for deployment!")
 ```
 
 ---
@@ -814,78 +1288,244 @@ class TrainingMonitor:
 
 ```python
 def main():
-    """Complete training pipeline."""
+    """
+    Complete training pipeline for transformer text classification.
     
-    # Configuration
+    This function demonstrates the end-to-end process of training a transformer model:
+    1. Configuration Setup: Define all training hyperparameters
+    2. Data Preparation: Load and prepare datasets
+    3. Model Initialization: Create and configure the transformer model
+    4. Training Execution: Run the complete training loop
+    5. Model Evaluation: Test the trained model on unseen data
+    6. Results Summary: Report final performance metrics
+    
+    The pipeline follows transformer training best practices:
+    - Proper data splitting (train/val/test)
+    - Learning rate warmup and scheduling
+    - Gradient clipping for stability
+    - Model checkpointing for best performance
+    - Comprehensive logging and monitoring
+    
+    Usage:
+        >>> python training_script.py
+        # This will run the complete training pipeline
+    
+    Output:
+        - Trained model saved as 'best_model.pth'
+        - Training logs and metrics
+        - Final test performance results
+    """
+    
+    print("🚀 Starting Transformer Training Pipeline")
+    print("=" * 60)
+    
+    # ===== STEP 1: CONFIGURATION SETUP =====
+    # Define all training hyperparameters in one place
+    # This makes it easy to experiment with different settings
+    
+    print("📋 Step 1: Setting up training configuration...")
     config = TrainingConfig(
-        vocab_size=30522,
-        d_model=512,
-        nhead=8,
-        num_layers=6,
-        num_classes=3,
-        batch_size=32,
-        learning_rate=1e-4,
-        num_epochs=10
+        # Model Architecture
+        vocab_size=30522,      # BERT vocabulary size
+        d_model=512,           # Hidden dimension (standard transformer size)
+        nhead=8,               # Number of attention heads
+        num_layers=6,          # Number of transformer layers
+        num_classes=3,         # 3 classes: positive, negative, neutral
+        
+        # Training Process
+        batch_size=32,         # Samples per batch (balance memory vs stability)
+        learning_rate=1e-4,    # Initial learning rate (standard for fine-tuning)
+        num_epochs=10,         # Total training epochs
+        
+        # Optimization
+        warmup_steps=1000,     # Learning rate warmup steps
+        max_grad_norm=1.0,     # Gradient clipping threshold
+        weight_decay=0.01,     # L2 regularization strength
+        dropout=0.1            # Dropout rate for regularization
     )
     
-    # Load and prepare data
-    print("Loading dataset...")
-    train_dataset, val_dataset, test_dataset = prepare_dataset(
-        "sentiment_dataset.csv",
-        "bert-base-uncased"
-    )
+    print(f"   ✅ Configuration created:")
+    print(f"      Model: {config.d_model}d, {config.nhead} heads, {config.num_layers} layers")
+    print(f"      Training: {config.batch_size} batch size, {config.learning_rate} LR, {config.num_epochs} epochs")
+    print(f"      Optimization: {config.warmup_steps} warmup, {config.max_grad_norm} grad clip")
     
-    # Create data loaders
+    # ===== STEP 2: DATA PREPARATION =====
+    # Load and prepare the dataset for training
+    # This includes data loading, preprocessing, and splitting
+    
+    print("\n📁 Step 2: Loading and preparing dataset...")
+    try:
+        train_dataset, val_dataset, test_dataset = prepare_dataset(
+            "sentiment_dataset.csv",    # Path to your dataset
+            "bert-base-uncased"         # Tokenizer to use
+        )
+        print(f"   ✅ Dataset loaded successfully:")
+        print(f"      Training samples: {len(train_dataset):,}")
+        print(f"      Validation samples: {len(val_dataset):,}")
+        print(f"      Test samples: {len(test_dataset):,}")
+    except FileNotFoundError:
+        print("   ❌ Error: Dataset file not found!")
+        print("      Please ensure 'sentiment_dataset.csv' exists in the current directory")
+        return
+    except Exception as e:
+        print(f"   ❌ Error loading dataset: {e}")
+        return
+    
+    # ===== STEP 3: CREATE DATA LOADERS =====
+    # DataLoaders handle batching, shuffling, and parallel processing
+    # They're essential for efficient training
+    
+    print("\n🔄 Step 3: Creating data loaders...")
+    
+    # Training DataLoader: shuffle=True for better training dynamics
     train_loader = DataLoader(
         train_dataset, 
-        batch_size=config.batch_size, 
-        shuffle=True,
-        num_workers=4
+        batch_size=config.batch_size,    # Use batch size from config
+        shuffle=True,                     # Shuffle data for each epoch
+        num_workers=4,                    # Parallel data loading (adjust based on CPU cores)
+        pin_memory=True                   # Faster data transfer to GPU
     )
     
+    # Validation DataLoader: shuffle=False for consistent evaluation
     val_loader = DataLoader(
         val_dataset, 
-        batch_size=config.batch_size, 
-        shuffle=False,
-        num_workers=4
+        batch_size=config.batch_size,    # Same batch size for consistency
+        shuffle=False,                    # No shuffling needed for validation
+        num_workers=4,                    # Parallel loading
+        pin_memory=True                   # Faster GPU transfer
     )
     
+    # Test DataLoader: shuffle=False for consistent evaluation
     test_loader = DataLoader(
         test_dataset, 
-        batch_size=config.batch_size, 
-        shuffle=False,
-        num_workers=4
+        batch_size=config.batch_size,    # Same batch size
+        shuffle=False,                    # No shuffling for testing
+        num_workers=4,                    # Parallel loading
+        pin_memory=True                   # Faster GPU transfer
     )
     
-    # Initialize model
-    print("Initializing model...")
-    model = TransformerClassifier(
-        vocab_size=config.vocab_size,
-        d_model=config.d_model,
-        nhead=config.nhead,
-        num_layers=config.num_layers,
-        num_classes=config.num_classes,
-        dropout=config.dropout
-    )
+    print(f"   ✅ Data loaders created:")
+    print(f"      Training batches: {len(train_loader)}")
+    print(f"      Validation batches: {len(val_loader)}")
+    print(f"      Test batches: {len(test_loader)}")
     
-    # Initialize trainer
-    trainer = TransformerTrainer(model, train_loader, val_loader, config)
+    # ===== STEP 4: MODEL INITIALIZATION =====
+    # Create the transformer model with specified architecture
+    # This is where we define the model structure
     
-    # Train model
-    print("Starting training...")
-    trainer.train()
+    print("\n🏗️  Step 4: Initializing transformer model...")
+    try:
+        model = TransformerClassifier(
+            # Model Architecture
+            vocab_size=config.vocab_size,      # Vocabulary size
+            d_model=config.d_model,            # Hidden dimension
+            nhead=config.nhead,                # Number of attention heads
+            num_layers=config.num_layers,      # Number of transformer layers
+            num_classes=config.num_classes,    # Output classes
+            
+            # Regularization
+            dropout=config.dropout             # Dropout rate
+        )
+        
+        # Calculate model parameters for information
+        total_params = sum(p.numel() for p in model.parameters())
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        
+        print(f"   ✅ Model initialized successfully:")
+        print(f"      Total parameters: {total_params:,}")
+        print(f"      Trainable parameters: {trainable_params:,}")
+        print(f"      Model size: {total_params * 4 / 1024 / 1024:.1f} MB (float32)")
+        
+    except Exception as e:
+        print(f"   ❌ Error initializing model: {e}")
+        return
     
-    # Load best model for evaluation
-    print("Loading best model for evaluation...")
-    checkpoint = torch.load('best_model.pth')
-    model.load_state_dict(checkpoint['model_state_dict'])
+    # ===== STEP 5: TRAINER INITIALIZATION =====
+    # Create the trainer that handles the training loop
+    # This includes optimizer, scheduler, and training logic
     
-    # Evaluate on test set
-    print("Evaluating on test set...")
-    test_loss, test_acc = trainer.evaluate(test_loader)
-    print(f"Test Accuracy: {test_acc:.2f}%")
+    print("\n🎯 Step 5: Initializing trainer...")
+    try:
+        trainer = TransformerTrainer(model, train_loader, val_loader, config)
+        print("   ✅ Trainer initialized successfully")
+        print("   ✅ Optimizer: AdamW with weight decay")
+        print("   ✅ Scheduler: Linear warmup + decay")
+        print("   ✅ Loss function: CrossEntropyLoss")
+        print("   ✅ Device: GPU" if torch.cuda.is_available() else "   ✅ Device: CPU")
+    except Exception as e:
+        print(f"   ❌ Error initializing trainer: {e}")
+        return
     
-    print("Training completed!")
+    # ===== STEP 6: TRAINING EXECUTION =====
+    # Run the complete training loop
+    # This is where the model actually learns from the data
+    
+    print("\n🚂 Step 6: Starting training...")
+    print("   This may take a while depending on your dataset size and hardware")
+    print("   Monitor progress with the progress bars and logged metrics")
+    
+    try:
+        trainer.train()
+        print("   ✅ Training completed successfully!")
+    except KeyboardInterrupt:
+        print("\n   ⚠️  Training interrupted by user")
+        print("   💾 Model checkpoint saved (if available)")
+        return
+    except Exception as e:
+        print(f"   ❌ Error during training: {e}")
+        return
+    
+    # ===== STEP 7: MODEL EVALUATION =====
+    # Load the best model and evaluate on test data
+    # This gives us the final performance metrics
+    
+    print("\n🧪 Step 7: Evaluating best model...")
+    try:
+        # Load the best model checkpoint
+        print("   Loading best model checkpoint...")
+        checkpoint = torch.load('best_model.pth')
+        model.load_state_dict(checkpoint['model_state_dict'])
+        
+        # Evaluate on test set
+        print("   Running evaluation on test set...")
+        test_loss, test_acc = trainer.evaluate(test_loader)
+        
+        print(f"   ✅ Final Test Results:")
+        print(f"      Loss: {test_loss:.4f}")
+        print(f"      Accuracy: {test_acc:.2f}%")
+        print(f"      Best validation accuracy: {checkpoint['val_accuracy']:.2f}%")
+        
+    except FileNotFoundError:
+        print("   ❌ Error: Best model checkpoint not found!")
+        print("      Training may have failed or no model was saved")
+        return
+    except Exception as e:
+        print(f"   ❌ Error during evaluation: {e}")
+        return
+    
+    # ===== STEP 8: FINAL SUMMARY =====
+    # Provide a comprehensive summary of the training run
+    
+    print("\n" + "=" * 60)
+    print("🎉 TRAINING PIPELINE COMPLETED SUCCESSFULLY!")
+    print("=" * 60)
+    print("📊 Final Results Summary:")
+    print(f"   🏆 Test Accuracy: {test_acc:.2f}%")
+    print(f"   📈 Best Validation Accuracy: {checkpoint['val_accuracy']:.2f}%")
+    print(f"   💾 Model saved as: best_model.pth")
+    print(f"   🔧 Configuration used: {config}")
+    print(f"   📁 Checkpoint includes: model weights, optimizer state, config")
+    
+    print("\n🚀 Next Steps:")
+    print("   1. Use the trained model for inference")
+    print("   2. Deploy the model in production")
+    print("   3. Experiment with different hyperparameters")
+    print("   4. Try different model architectures")
+    
+    print("\n✅ Training pipeline completed. Model ready for deployment!")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
