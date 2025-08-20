@@ -1,12 +1,12 @@
-# Transformer Processing Trace: "It is a example input"
+# Transformer Processing Trace: "This is an example input"
 
-This document traces through the complete processing of the input sentence "It is a example input" through a transformer model, showing the values at each step.
+This document traces through the complete processing of the input sentence "This is an example input" through a transformer model, showing the values at each step.
 
 ## 📝 Input Sentence
-**Original Text**: "It is a example input"
+**Original Text**: "This is an example input"
 
 ## 🔤 Tokenization
-**Tokens**: `["It", "is", "a", "example", "input"]`
+**Tokens**: `["This", "is", "an", "example", "input"]`
 **Token IDs**: `[101, 2023, 1037, 2741, 4248, 102]` (using BERT tokenizer)
 **Sequence Length (N)**: 6 tokens
 
@@ -29,9 +29,9 @@ token_embeddings = embedding_layer(token_ids)
 # Shape: (1, 6, 512)
 # Values (first few dimensions shown):
 # Position 0: [0.1, -0.3, 0.8, 0.2, -0.5, ...]  # [CLS] token
-# Position 1: [0.4, 0.7, -0.2, 0.9, 0.1, ...]  # "It"
+# Position 1: [0.4, 0.7, -0.2, 0.9, 0.1, ...]  # "This"
 # Position 2: [0.2, -0.8, 0.6, 0.3, -0.4, ...] # "is"
-# Position 3: [0.5, 0.1, 0.8, -0.3, 0.7, ...]  # "a"
+# Position 3: [0.5, 0.1, 0.8, -0.3, 0.7, ...]  # "an"
 # Position 4: [0.3, -0.6, 0.4, 0.8, -0.2, ...] # "example"
 # Position 5: [0.7, 0.2, -0.5, 0.1, 0.9, ...] # "input"
 ```
@@ -137,7 +137,7 @@ K_head0 = K[0]  # Shape: (1, 6, 64)
 # Position 2: [0.3, -0.5, 0.9, 0.2, -0.4, ...] # 64 dimensions
 # Position 3: [0.1, 0.7, 0.5, -0.2, 0.8, ...]  # 64 dimensions
 # Position 4: [-0.2, -0.6, 0.7, 0.9, -0.1, ...] # 64 dimensions
-# Position 5: [0.8, 0.4, -0.3, 0.6, 0.7, ...]  # 64 dimensions
+# Position 5: [0.7, 0.4, -0.3, 0.6, 0.7, ...]  # 64 dimensions
 
 # Compute attention scores: Q @ K^T
 scores = torch.matmul(Q_head0, K_head0.transpose(-2, -1))
@@ -145,9 +145,9 @@ scores = torch.matmul(Q_head0, K_head0.transpose(-2, -1))
 # Values (6x6 matrix):
 #           Pos0   Pos1   Pos2   Pos3   Pos4   Pos5
 # Pos0:    [2.1,  1.8,   1.9,   1.7,   1.6,   2.0]  # [CLS] attends to all
-# Pos1:    [1.8,  2.3,   1.7,   1.9,   1.5,   2.1]  # "It" attends to all
+# Pos1:    [1.8,  2.3,   1.7,   1.9,   1.5,   2.1]  # "This" attends to all
 # Pos2:    [1.9,  1.7,   2.4,   1.8,   1.6,   2.2]  # "is" attends to all
-# Pos3:    [1.7,  1.9,   1.8,   2.2,   1.7,   1.9]  # "a" attends to all
+# Pos3:    [1.7,  1.9,   1.8,   2.2,   1.7,   1.9]  # "an" attends to all
 # Pos4:    [1.6,  1.5,   1.6,   1.7,   2.5,   1.8]  # "example" attends to all
 # Pos5:    [2.0,  2.1,   2.2,   1.9,   1.8,   2.6]  # "input" attends to all
 ```
@@ -173,9 +173,9 @@ attention_weights = F.softmax(scaled_scores, dim=-1)
 # Values (6x6 matrix - probabilities sum to 1 per row):
 #           Pos0   Pos1   Pos2   Pos3   Pos4   Pos5
 # Pos0:    [0.17, 0.16,  0.16,  0.15,  0.15,  0.17]  # [CLS] attention
-# Pos1:    [0.15, 0.19,  0.15,  0.17,  0.14,  0.18]  # "It" attention
+# Pos1:    [0.15, 0.19,  0.15,  0.17,  0.14,  0.18]  # "This" attention
 # Pos2:    [0.16, 0.15,  0.20,  0.16,  0.15,  0.18]  # "is" attention
-# Pos3:    [0.15, 0.16,  0.16,  0.19,  0.15,  0.17]  # "a" attention
+# Pos3:    [0.15, 0.16,  0.16,  0.19,  0.15,  0.17]  # "an" attention
 # Pos4:    [0.15, 0.14,  0.15,  0.15,  0.22,  0.16]  # "example" attention
 # Pos5:    [0.16,  0.17, 0.18,  0.16,  0.15,  0.21]  # "input" attention
 ```
@@ -302,7 +302,7 @@ final_normalized = layer_norm2(final_output)
 
 ## 🔄 Complete Transformer Block Summary
 
-The input sentence "It is a example input" has been processed through:
+The input sentence "This is an example input" has been processed through:
 
 1. **Tokenization**: 6 tokens → token IDs
 2. **Embedding**: Token IDs → 512-dimensional embeddings
@@ -323,10 +323,10 @@ Each position now contains a rich representation that has attended to all other 
 
 The attention weights show how each token attends to others:
 - **[CLS]**: Attends broadly to understand the full sentence
-- **"It"**: Focuses on "is" and "a" (subject-verb relationship)
-- **"is"**: Attends to "It" and "a" (verb-subject relationship)
-- **"a"**: Attends to "example" (article-noun relationship)
-- **"example"**: Attends to "a" and "input" (noun relationships)
+- **"This"**: Focuses on "is" and "an" (subject-verb relationship)
+- **"is"**: Attends to "This" and "an" (verb-subject relationship)
+- **"an"**: Attends to "example" (article-noun relationship)
+- **"example"**: Attends to "an" and "input" (noun relationships)
 - **"input"**: Attends to "example" (noun-noun relationship)
 
 This demonstrates how the transformer learns to capture grammatical and semantic relationships through self-attention! 🎯
