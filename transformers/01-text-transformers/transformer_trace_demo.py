@@ -168,8 +168,8 @@ class TransformerTraceDemo:
         
         # Create a simple vocabulary mapping for demo
         # In practice, this would be a large vocabulary learned from training data
-        vocab = {"[CLS]": 101, "[SEP]": 102, "It": 2023, "is": 1037, 
-                "a": 2741, "example": 4248, "input": 5000}
+        vocab = {"[CLS]": 101, "[SEP]": 102, "This": 2023, "is": 1037, 
+                "an": 2741, "example": 4248, "input": 5000}
         
         # Convert tokens to IDs, using 1000 for unknown tokens (OOV)
         token_ids = [vocab.get(token, 1000) for token in tokens]
@@ -215,7 +215,7 @@ class TransformerTraceDemo:
         print(f"   Each token now has a {self.d_model}-dimensional representation")
         print(f"   Sample values (first 5 dimensions of first 3 positions):")
         for i in range(min(3, embeddings.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
             print(f"     {pos_name}: {embeddings[0, i, :5].tolist()}")
         print(f"   These vectors will be learned during training to capture semantic meaning")
         print()
@@ -263,7 +263,7 @@ class TransformerTraceDemo:
         print(f"   Each position now has unique positional information")
         print(f"   Sample values after adding positional encoding (first 5 dimensions):")
         for i in range(min(3, encoded.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
             print(f"     {pos_name}: {embeddings[0, i, :5].tolist()} + {pos_encodings[0, i, :5].tolist()} = {encoded[0, i, :5].tolist()}")
         print(f"   Now each token has both semantic (from embedding) and positional information")
         print()
@@ -320,7 +320,7 @@ class TransformerTraceDemo:
         print(f"     V shape: {V.shape}")
         print(f"     Sample Q values (first 5 dimensions of first 3 positions):")
         for i in range(min(3, Q.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
             print(f"       {pos_name}: {Q[0, i, :5].tolist()}")
         print(f"     These Q, K, V are learned transformations of the input")
         print()
@@ -414,8 +414,8 @@ class TransformerTraceDemo:
         print(f"     W_o learns optimal combination of head outputs")
         print(f"     Sample output values (first 5 dimensions of first 3 positions):")
         for i in range(min(3, output.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
-            print(f"       {pos_name}: {output[0, i, :5].tolist()}")
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
+            print(f"       {output[0, i, :5].tolist()}")
         print(f"     This output contains rich contextual information from all positions")
         print()
         
@@ -458,8 +458,8 @@ class TransformerTraceDemo:
         print(f"   Output shape: {output.shape}")
         print(f"   Sample output values (first 5 dimensions of first 3 positions):")
         for i in range(min(3, output.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
-            print(f"     {pos_name}: {output[0, i, :5].tolist()}")
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
+            print(f"     {output[0, i, :5].tolist()}")
         print(f"   The FFN adds non-linearity and increases model capacity")
         print()
         
@@ -518,7 +518,7 @@ class TransformerTraceDemo:
         print(f"     This stabilizes training and helps with convergence")
         print(f"     Sample values (first 5 dimensions of first 3 positions):")
         for i in range(min(3, normalized_output.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
             print(f"     {pos_name}: {normalized_output[0, i, :5].tolist()}")
         print()
         
@@ -539,7 +539,7 @@ class TransformerTraceDemo:
         print(f"     This completes the transformer block")
         print(f"     Sample final values (first 5 dimensions of first 3 positions):")
         for i in range(min(3, final_output.shape[1])):
-            pos_name = ["[CLS]", "It", "is"][i] if i < 3 else f"Pos{i}"
+            pos_name = ["[CLS]", "This", "is"][i] if i < 3 else f"Pos{i}"
             print(f"     {pos_name}: {final_output[0, i, :5].tolist()}")
         print(f"     Each position now contains rich contextual information from the entire sequence")
         print()
@@ -661,7 +661,7 @@ def main():
     transformer = TransformerTraceDemo(d_model=512, num_heads=8)
     
     # Process the example sentence
-    text = "It is a example input"
+    text = "This is an example input"
     output, attention_weights, tokens = transformer.process_sentence(text)
     
     # Visualize attention
