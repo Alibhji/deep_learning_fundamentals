@@ -1,0 +1,7 @@
+file,Geometric Mean Score,F1 Score
+demand_response_predictions_optimized_v3,0.806,0.355
+demand_response_predictions_optimized_cv,0.816,0.356
+ad_v8.9_optimized, 0.805,0.350
+ad_v8.8_optimized, 0.785, 0.352
+demand_response_predictions_optimized_v3.2.5_latest, 0.754, 0.344
+demand_response_predictions_optimized_v3.2.4_opt,0.748 , 0.345
